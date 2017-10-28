@@ -1,0 +1,15 @@
+--- a/components/password_manager/core/browser/password_manager.cc	2017-10-11 15:10:28.000000000 -0400
++++ b/components/password_manager/core/browser/password_manager.cc	2017-10-15 10:40:34.034010691 -0400
+@@ -199,10 +199,10 @@
+ void PasswordManager::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(
+-      prefs::kCredentialsEnableService, true,
++      prefs::kCredentialsEnableService, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PRIORITY_PREF);
+   registry->RegisterBooleanPref(
+-      prefs::kCredentialsEnableAutosignin, true,
++      prefs::kCredentialsEnableAutosignin, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PRIORITY_PREF);
+   registry->RegisterBooleanPref(prefs::kWasObsoleteHttpDataCleaned, false);
+   registry->RegisterStringPref(prefs::kSyncPasswordHash, std::string(),

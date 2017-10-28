@@ -1,0 +1,17 @@
+--- a/components/bookmarks/browser/bookmark_utils.cc	2017-10-04 18:07:38.000000000 -0400
++++ b/components/bookmarks/browser/bookmark_utils.cc	2017-10-08 19:06:23.430644404 -0400
+@@ -442,12 +442,12 @@
+ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(
+       prefs::kShowBookmarkBar,
+-      false,
++      true,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterBooleanPref(prefs::kEditBookmarksEnabled, true);
+   registry->RegisterBooleanPref(
+       prefs::kShowAppsShortcutInBookmarkBar,
+-      true,
++      false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterBooleanPref(
+       prefs::kShowManagedBookmarksInBookmarkBar,

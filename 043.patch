@@ -1,0 +1,87 @@
+--- a/base/metrics/histogram.cc	2017-10-04 18:07:32.000000000 -0400
++++ b/base/metrics/histogram.cc	2017-10-08 20:06:49.944125362 -0400
+@@ -124,7 +124,9 @@
+       minimum_(minimum),
+       maximum_(maximum),
+       bucket_count_(bucket_count),
+-      flags_(flags) {}
++      flags_(flags),
++      enabled_(HistogramBase::MetricsEnabled()) {}
++
+ 
+   // Create a BucketRanges structure appropriate for this histogram.
+   virtual BucketRanges* CreateRanges() {
+@@ -154,13 +156,18 @@
+   HistogramBase::Sample maximum_;
+   uint32_t bucket_count_;
+   int32_t flags_;
++  const bool enabled_;
+ 
+  private:
+   DISALLOW_COPY_AND_ASSIGN(Factory);
+ };
+ 
+ HistogramBase* Histogram::Factory::Build() {
+-  HistogramBase* histogram = StatisticsRecorder::FindHistogram(name_);
++  std::string overridden_name = HistogramBase::kDummyName;
++  if (enabled_)
++    overridden_name = name_;
++
++  HistogramBase* histogram = StatisticsRecorder::FindHistogram(overridden_name);
+   if (!histogram) {
+     // To avoid racy destruction at shutdown, the following will be leaked.
+     const BucketRanges* created_ranges = CreateRanges();
+@@ -191,7 +198,7 @@
+     if (allocator) {
+       tentative_histogram = allocator->AllocateHistogram(
+           histogram_type_,
+-          name_,
++          overridden_name,
+           minimum_,
+           maximum_,
+           registered_ranges,
+@@ -232,6 +239,10 @@
+     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
+   }
+ 
++  if (!enabled_)
++    return histogram;
++
++  histogram->enabled = true;
+   CHECK_EQ(histogram_type_, histogram->GetHistogramType()) << name_;
+   if (bucket_count_ != 0 &&
+       !histogram->HasConstructionArguments(minimum_, maximum_, bucket_count_)) {
+@@ -468,10 +479,16 @@
+ }
+ 
+ void Histogram::Add(int value) {
++  if (!enabled)
++    return;
++
+   AddCount(value, 1);
+ }
+ 
+ void Histogram::AddCount(int value, int count) {
++  if (!enabled)
++    return;
++
+   DCHECK_EQ(0, ranges(0));
+   DCHECK_EQ(kSampleType_MAX, ranges(bucket_count()));
+ 
+@@ -526,10 +543,16 @@
+ }
+ 
+ void Histogram::AddSamples(const HistogramSamples& samples) {
++  if (!enabled)
++    return;
++
+   unlogged_samples_->Add(samples);
+ }
+ 
+ bool Histogram::AddSamplesFromPickle(PickleIterator* iter) {
++  if (!enabled)
++    return true;
++
+   return unlogged_samples_->AddFromPickle(iter);
+ }
+ 

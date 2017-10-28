@@ -1,0 +1,11 @@
+--- a/chrome/browser/background/background_mode_manager.cc	2017-10-04 18:07:33.000000000 -0400
++++ b/chrome/browser/background/background_mode_manager.cc	2017-10-08 18:58:08.460567925 -0400
+@@ -363,7 +363,7 @@
+   registry->RegisterBooleanPref(prefs::kChromeCreatedLoginItem, false);
+   registry->RegisterBooleanPref(prefs::kMigratedLoginItemPref, false);
+ #endif
+-  registry->RegisterBooleanPref(prefs::kBackgroundModeEnabled, true);
++  registry->RegisterBooleanPref(prefs::kBackgroundModeEnabled, false);
+ }
+ 
+ void BackgroundModeManager::RegisterProfile(Profile* profile) {

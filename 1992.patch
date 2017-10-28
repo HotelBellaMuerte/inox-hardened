@@ -1,0 +1,63 @@
+--- a/chrome/browser/media/router/media_router_feature.cc	2017-10-11 15:10:22.000000000 -0400
++++ b/chrome/browser/media/router/media_router_feature.cc	2017-10-15 10:01:55.341432773 -0400
+@@ -10,6 +10,10 @@
+ #include "content/public/browser/browser_context.h"
+ #include "extensions/features/features.h"
+ 
++#include "chrome/common/pref_names.h"
++#include "components/prefs/pref_service.h"
++#include "components/user_prefs/user_prefs.h"
++
+ #if defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+ #include "chrome/common/pref_names.h"
+ #include "components/prefs/pref_service.h"
+@@ -18,8 +22,6 @@
+ 
+ namespace media_router {
+ 
+-#if !defined(OS_ANDROID)
+-// Controls if browser side DIAL device discovery is enabled.
+ const base::Feature kEnableDialLocalDiscovery{
+     "EnableDialLocalDiscovery", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+@@ -30,9 +32,7 @@
+ // Controls if local media casting is enabled.
+ const base::Feature kEnableCastLocalMedia{"EnableCastLocalMedia",
+                                           base::FEATURE_DISABLED_BY_DEFAULT};
+-#endif
+ 
+-#if defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+ namespace {
+ const PrefService::Preference* GetMediaRouterPref(
+     content::BrowserContext* context) {
+@@ -40,10 +40,8 @@
+       prefs::kEnableMediaRouter);
+ }
+ }  // namespace
+-#endif  // defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+ 
+ bool MediaRouterEnabled(content::BrowserContext* context) {
+-#if defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+   const PrefService::Preference* pref = GetMediaRouterPref(context);
+   // Only use the pref value if it set from a mandatory policy.
+   if (pref->IsManaged() && !pref->IsDefaultValue()) {
+@@ -55,12 +53,8 @@
+   // The component extension cannot be loaded in guest sessions.
+   // TODO(crbug.com/756243): Figure out why.
+   return !Profile::FromBrowserContext(context)->IsGuestSession();
+-#else  // !(defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS))
+-  return false;
+-#endif  // defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+ }
+ 
+-#if !defined(OS_ANDROID)
+ // Returns true if browser side DIAL discovery is enabled.
+ bool DialLocalDiscoveryEnabled() {
+   return base::FeatureList::IsEnabled(kEnableDialLocalDiscovery);
+@@ -75,6 +69,5 @@
+ bool CastLocalMediaEnabled() {
+   return base::FeatureList::IsEnabled(kEnableCastLocalMedia);
+ }
+-#endif
+ 
+ }  // namespace media_router

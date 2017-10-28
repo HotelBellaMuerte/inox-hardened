@@ -1,0 +1,20 @@
+--- a/chrome/browser/spellchecker/spellcheck_hunspell_dictionary.cc	2017-10-04 18:07:35.000000000 -0400
++++ b/chrome/browser/spellchecker/spellcheck_hunspell_dictionary.cc	2017-10-08 19:34:40.150936815 -0400
+@@ -151,7 +151,6 @@
+     return;
+   }
+   request_context_getter_ = request_context_getter;
+-  DownloadDictionary(GetDictionaryURL());
+ }
+ 
+ bool SpellcheckHunspellDictionary::IsReady() const {
+@@ -368,9 +367,6 @@
+     }
+ 
+     if (request_context_getter_) {
+-      // Download from the UI thread to check that |request_context_getter_| is
+-      // still valid.
+-      DownloadDictionary(GetDictionaryURL());
+       return;
+     }
+   }

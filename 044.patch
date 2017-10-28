@@ -1,0 +1,81 @@
+--- a/base/metrics/sparse_histogram.cc	2017-10-04 18:07:32.000000000 -0400
++++ b/base/metrics/sparse_histogram.cc	2017-10-08 20:11:37.671771593 -0400
+@@ -24,7 +24,12 @@
+ // static
+ HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
+                                            int32_t flags) {
+-  HistogramBase* histogram = StatisticsRecorder::FindHistogram(name);
++  const bool enabled_ = HistogramBase::MetricsEnabled();
++  std::string overridden_name = HistogramBase::kDummySparseName;
++  if (enabled_)
++    overridden_name = name;
++
++  HistogramBase* histogram = StatisticsRecorder::FindHistogram(overridden_name);
+   if (!histogram) {
+     // Try to create the histogram using a "persistent" allocator. As of
+     // 2016-02-25, the availability of such is controlled by a base::Feature
+@@ -36,7 +41,7 @@
+     PersistentHistogramAllocator* allocator = GlobalHistogramAllocator::Get();
+     if (allocator) {
+       tentative_histogram = allocator->AllocateHistogram(
+-          SPARSE_HISTOGRAM, name, 0, 0, nullptr, flags, &histogram_ref);
++          SPARSE_HISTOGRAM, overridden_name, 0, 0, nullptr, flags, &histogram_ref);
+     }
+ 
+     // Handle the case where no persistent allocator is present or the
+@@ -45,7 +50,7 @@
+       DCHECK(!histogram_ref);  // Should never have been set.
+       DCHECK(!allocator);      // Shouldn't have failed.
+       flags &= ~HistogramBase::kIsPersistent;
+-      tentative_histogram.reset(new SparseHistogram(name));
++      tentative_histogram.reset(new SparseHistogram(overridden_name));
+       tentative_histogram->SetFlags(flags);
+     }
+ 
+@@ -68,6 +73,10 @@
+     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
+   }
+ 
++  if (!enabled_)
++    return histogram;
++
++  histogram->enabled = true;
+   CHECK_EQ(SPARSE_HISTOGRAM, histogram->GetHistogramType());
+   return histogram;
+ }
+@@ -100,11 +109,17 @@
+   return false;
+ }
+ 
++  if (!enabled)
++    return;
++
+ void SparseHistogram::Add(Sample value) {
+   AddCount(value, 1);
+ }
+ 
+ void SparseHistogram::AddCount(Sample value, int count) {
++  if (!enabled)
++    return;
++
+   if (count <= 0) {
+     NOTREACHED();
+     return;
+@@ -150,11 +165,17 @@
+ }
+ 
+ void SparseHistogram::AddSamples(const HistogramSamples& samples) {
++  if (!enabled)
++    return;
++
+   base::AutoLock auto_lock(lock_);
+   unlogged_samples_->Add(samples);
+ }
+ 
+ bool SparseHistogram::AddSamplesFromPickle(PickleIterator* iter) {
++  if (!enabled)
++    return;
++
+   base::AutoLock auto_lock(lock_);
+   return unlogged_samples_->AddFromPickle(iter);
+ }

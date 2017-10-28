@@ -1,0 +1,40 @@
+--- a/chrome/browser/extensions/component_loader.cc	2017-10-04 18:07:34.000000000 -0400
++++ b/chrome/browser/extensions/component_loader.cc	2017-10-08 18:40:32.613375762 -0400
+@@ -434,11 +434,6 @@
+   if (!IsNormalSession())
+     return;
+ #endif
+-
+-  AddWithNameAndDescription(
+-      IDR_WEBSTORE_MANIFEST, base::FilePath(FILE_PATH_LITERAL("web_store")),
+-      l10n_util::GetStringUTF8(IDS_WEBSTORE_NAME_STORE),
+-      l10n_util::GetStringUTF8(IDS_WEBSTORE_APP_DESCRIPTION));
+ }
+ 
+ scoped_refptr<const Extension> ComponentLoader::CreateExtension(
+@@ -493,11 +488,6 @@
+     Add(IDR_BOOKMARKS_MANIFEST,
+         base::FilePath(FILE_PATH_LITERAL("bookmark_manager")));
+   }
+-#if BUILDFLAG(ENABLE_PRINTING)
+-  // Cloud Print component app. Not required on Chrome OS.
+-  Add(IDR_CLOUDPRINT_MANIFEST,
+-      base::FilePath(FILE_PATH_LITERAL("cloud_print")));
+-#endif  // BUILDFLAG(ENABLE_PRINTING)
+ #endif  // defined(OS_CHROMEOS)
+ 
+   if (!skip_session_components) {
+@@ -575,13 +565,6 @@
+     AddHotwordAudioVerificationApp();
+     AddHotwordHelperExtension();
+     AddImageLoaderExtension();
+-
+-    bool install_feedback = enable_background_extensions_during_testing;
+-#if defined(GOOGLE_CHROME_BUILD)
+-    install_feedback = true;
+-#endif  // defined(GOOGLE_CHROME_BUILD)
+-    if (install_feedback)
+-      Add(IDR_FEEDBACK_MANIFEST, base::FilePath(FILE_PATH_LITERAL("feedback")));
+   }
+ 
+ #if defined(OS_CHROMEOS)

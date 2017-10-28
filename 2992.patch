@@ -1,0 +1,30 @@
+--- a/chrome/browser/media/router/media_router_feature.h	2017-10-11 15:10:22.000000000 -0400
++++ b/chrome/browser/media/router/media_router_feature.h	2017-10-15 10:02:19.671623173 -0400
+@@ -5,15 +5,27 @@
+ #ifndef CHROME_BROWSER_MEDIA_ROUTER_MEDIA_ROUTER_FEATURE_H_
+ #define CHROME_BROWSER_MEDIA_ROUTER_MEDIA_ROUTER_FEATURE_H_
+ 
++#include "base/feature_list.h"
++
+ namespace content {
+ class BrowserContext;
+ }
+ 
+ namespace media_router {
+ 
++extern const base::Feature kEnableCastDiscovery;
+ // Returns true if Media Router is enabled for |context|.
+ bool MediaRouterEnabled(content::BrowserContext* context);
+ 
++// Returns true if browser side DIAL discovery is enabled.
++bool DialLocalDiscoveryEnabled();
++
++// Returns true if browser side Cast discovery is enabled.
++bool CastDiscoveryEnabled();
++
++// Returns true if local media casting is enabled.
++bool CastLocalMediaEnabled();
++
+ #if !defined(OS_ANDROID)
+ // Returns true if browser side DIAL discovery is enabled.
+ bool DialLocalDiscoveryEnabled();

@@ -1,0 +1,10 @@
+--- a/chrome/browser/extensions/component_extensions_whitelist/whitelist.cc	2017-10-10 10:08:59.617626947 -0400
++++ b/chrome/browser/extensions/component_extensions_whitelist/whitelist.cc	2017-10-10 10:09:20.083135514 -0400
+@@ -81,7 +81,6 @@
+ #endif
+     case IDR_CRYPTOTOKEN_MANIFEST:
+     case IDR_FEEDBACK_MANIFEST:
+-    case IDR_GAIA_AUTH_MANIFEST:
+ #if BUILDFLAG(ENABLE_HANGOUT_SERVICES_EXTENSION)
+     case IDR_HANGOUT_SERVICES_MANIFEST:
+ #endif

@@ -1,0 +1,11 @@
+--- a/chrome/browser/profiles/profile_impl.cc	2017-10-11 15:10:23.000000000 -0400
++++ b/chrome/browser/profiles/profile_impl.cc	2017-10-16 17:43:55.102119340 -0400
+@@ -388,7 +388,7 @@
+   registry->RegisterStringPref(
+       prefs::kPrintPreviewDefaultDestinationSelectionRules, std::string());
+   registry->RegisterBooleanPref(prefs::kForceEphemeralProfiles, false);
+-  registry->RegisterBooleanPref(prefs::kEnableMediaRouter, true);
++  registry->RegisterBooleanPref(prefs::kEnableMediaRouter, false);
+ #if !defined(OS_ANDROID)
+   registry->RegisterBooleanPref(prefs::kShowCastIconInToolbar, false);
+ #endif  // !defined(OS_ANDROID)

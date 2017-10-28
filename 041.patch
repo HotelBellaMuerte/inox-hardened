@@ -1,0 +1,15 @@
+--- a/base/metrics/histogram_base.h	2017-10-04 18:07:32.000000000 -0400
++++ b/base/metrics/histogram_base.h	2017-10-08 19:59:22.658655325 -0400
+@@ -84,6 +84,12 @@
+ 
+ class BASE_EXPORT HistogramBase {
+  public:
++  // Allow histograms to be disabled.
++  static const std::string& kDummyName;
++  static const std::string& kDummySparseName;
++  static bool MetricsEnabled();
++  bool enabled = false;
++
+   typedef int32_t Sample;                // Used for samples.
+   typedef subtle::Atomic32 AtomicCount;  // Used to count samples.
+   typedef int32_t Count;  // Used to manipulate counts in temporaries.

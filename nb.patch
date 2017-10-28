@@ -1,0 +1,11 @@
+--- a/content/browser/appcache/appcache_update_request_base.cc	2017-10-11 15:10:29.000000000 -0400
++++ b/content/browser/appcache/appcache_update_request_base.cc	2017-10-16 17:53:16.762046459 -0400
+@@ -36,7 +36,7 @@
+           "disabled, all appcache requests will be stopped."
+         chrome_policy {
+             DefaultCookiesSetting {
+-              DefaultCookiesSetting: 2
++              DefaultCookiesSetting: 4
+             }
+           }
+       })");

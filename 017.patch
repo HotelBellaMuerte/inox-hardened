@@ -1,0 +1,14 @@
+--- a/chrome/browser/signin/signin_promo.cc	2017-10-04 18:07:35.000000000 -0400
++++ b/chrome/browser/signin/signin_promo.cc	2017-10-08 19:05:20.784066063 -0400
+@@ -328,9 +328,9 @@
+ void RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterIntegerPref(prefs::kSignInPromoStartupCount, 0);
+-  registry->RegisterBooleanPref(prefs::kSignInPromoUserSkipped, false);
++  registry->RegisterBooleanPref(prefs::kSignInPromoUserSkipped, true);
+   registry->RegisterBooleanPref(prefs::kSignInPromoShowOnFirstRunAllowed, true);
+-  registry->RegisterBooleanPref(prefs::kSignInPromoShowNTPBubble, false);
++  registry->RegisterBooleanPref(prefs::kSignInPromoShowNTPBubble, true);
+ }
+ 
+ }  // namespace signin

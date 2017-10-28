@@ -1,0 +1,11 @@
+--- a/chrome/browser/net/prediction_options.cc	2017-10-04 18:07:34.000000000 -0400
++++ b/chrome/browser/net/prediction_options.cc	2017-10-08 18:55:55.397869866 -0400
+@@ -30,7 +30,7 @@
+         return NetworkPredictionStatus::ENABLED;
+       }
+     default:
+-      DCHECK_EQ(NETWORK_PREDICTION_NEVER, network_prediction_options);
++      //DCHECK_EQ(NETWORK_PREDICTION_NEVER, network_prediction_options);
+       return NetworkPredictionStatus::DISABLED_ALWAYS;
+   }
+ }

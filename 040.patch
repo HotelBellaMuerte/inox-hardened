@@ -1,0 +1,14 @@
+--- a/chrome/browser/about_flags.cc	2017-10-04 18:07:33.000000000 -0400
++++ b/chrome/browser/about_flags.cc	2017-10-08 19:57:25.367953100 -0400
+@@ -1208,6 +1208,11 @@
+ //
+ // When adding a new choice, add it to the end of the list.
+ const FeatureEntry kFeatureEntries[] = {
++    {"enable-metrics",
++     "Record metrics",
++     "Record histograms and user actions.",
++     kOsAll, SINGLE_VALUE_TYPE("enable-metrics")},
++
+     {"ignore-gpu-blacklist", flag_descriptions::kIgnoreGpuBlacklistName,
+      flag_descriptions::kIgnoreGpuBlacklistDescription, kOsAll,
+      SINGLE_VALUE_TYPE(switches::kIgnoreGpuBlacklist)},

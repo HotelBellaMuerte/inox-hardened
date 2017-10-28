@@ -1,0 +1,42 @@
+--- a/base/metrics/user_metrics.cc	2017-10-04 18:07:32.000000000 -0400
++++ b/base/metrics/user_metrics.cc	2017-10-08 20:14:31.035566604 -0400
+@@ -9,6 +9,7 @@
+ #include <vector>
+ 
+ #include "base/bind.h"
++#include "base/command_line.h"
+ #include "base/lazy_instance.h"
+ #include "base/location.h"
+ #include "base/macros.h"
+@@ -23,12 +24,21 @@
+     g_task_runner = LAZY_INSTANCE_INITIALIZER;
+ 
+ }  // namespace
++static bool MetricsEnabled() {
++  return base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics");
++}
+ 
+ void RecordAction(const UserMetricsAction& action) {
++  if (!enabled())
++    return;
++
+   RecordComputedAction(action.str_);
+ }
+ 
+ void RecordComputedAction(const std::string& action) {
++  if (!enabled())
++    return;
++
+   if (!g_task_runner.Get()) {
+     DCHECK(g_callbacks.Get().empty());
+     return;
+@@ -46,6 +56,9 @@
+ }
+ 
+ void AddActionCallback(const ActionCallback& callback) {
++  if (!enabled())
++    return;
++
+   // Only allow adding a callback if the task runner is set.
+   DCHECK(g_task_runner.Get());
+   DCHECK(g_task_runner.Get()->BelongsToCurrentThread());

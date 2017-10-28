@@ -1,0 +1,33 @@
+--- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc	2017-10-04 18:07:36.000000000 -0400
++++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc	2017-10-08 19:44:52.501700953 -0400
+@@ -1105,8 +1105,6 @@
+         // Replace magic names for the actual urls.
+         if (it->host() == "new_tab_page") {
+           startup_urls->push_back(GURL(chrome::kChromeUINewTabURL));
+-        } else if (it->host() == "welcome_page") {
+-          startup_urls->push_back(internals::GetWelcomePageURL());
+         } else {
+           startup_urls->push_back(*it);
+         }
+@@ -1121,10 +1119,6 @@
+   if (startup_urls->empty()) {
+     AddSpecialURLs(startup_urls);
+     startup_urls->push_back(GURL(chrome::kChromeUINewTabURL));
+-
+-    // Special case the FIRST_RUN_LAST_TAB case of the welcome page.
+-    if (welcome_run_type_ == WelcomeRunType::FIRST_RUN_LAST_TAB)
+-      startup_urls->push_back(internals::GetWelcomePageURL());
+   }
+ 
+   if (signin::ShouldShowPromoAtStartup(profile_, is_first_run_)) {
+@@ -1160,10 +1154,6 @@
+ 
+ void StartupBrowserCreatorImpl::AddSpecialURLs(
+     std::vector<GURL>* url_list) const {
+-  // Optionally include the welcome page.
+-  if (welcome_run_type_ == WelcomeRunType::FIRST_TAB)
+-    url_list->insert(url_list->begin(), internals::GetWelcomePageURL());
+-
+   // If this Profile is marked for a reset prompt, ensure the reset
+   // settings dialog appears.
+   if (ProfileHasResetTrigger()) {

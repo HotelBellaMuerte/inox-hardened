@@ -1,0 +1,10 @@
+--- a/chrome/browser/ui/startup/google_api_keys_infobar_delegate.cc	2017-10-04 18:07:36.000000000 -0400
++++ b/chrome/browser/ui/startup/google_api_keys_infobar_delegate.cc	2017-10-08 19:31:05.171778519 -0400
+@@ -15,6 +15,7 @@
+ 
+ // static
+ void GoogleApiKeysInfoBarDelegate::Create(InfoBarService* infobar_service) {
++  return;
+   if (google_apis::HasKeysConfigured())
+     return;
+ 

@@ -1,0 +1,74 @@
+--- a/components/content_settings/core/browser/content_settings_registry.cc	2017-10-04 18:07:38.000000000 -0400
++++ b/components/content_settings/core/browser/content_settings_registry.cc	2017-10-09 23:16:32.253867943 -0400
+@@ -118,7 +118,7 @@
+   // WARNING: The string names of the permissions passed in below are used to
+   // generate preference names and should never be changed!
+ 
+-  Register(CONTENT_SETTINGS_TYPE_COOKIES, "cookies", CONTENT_SETTING_ALLOW,
++  Register(CONTENT_SETTINGS_TYPE_COOKIES, "cookies", CONTENT_SETTING_SESSION_ONLY,
+            WebsiteSettingsInfo::SYNCABLE,
+            WhitelistedSchemes(kChromeUIScheme, kChromeDevToolsScheme),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+@@ -167,7 +167,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_GEOLOCATION, "geolocation",
+-           CONTENT_SETTING_ASK, WebsiteSettingsInfo::UNSYNCABLE,
++           CONTENT_SETTING_BLOCK, WebsiteSettingsInfo::UNSYNCABLE,
+            WhitelistedSchemes(),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+                          CONTENT_SETTING_ASK),
+@@ -189,7 +189,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_MEDIASTREAM_MIC, "media-stream-mic",
+-           CONTENT_SETTING_ASK, WebsiteSettingsInfo::UNSYNCABLE,
++           CONTENT_SETTING_BLOCK, WebsiteSettingsInfo::UNSYNCABLE,
+            WhitelistedSchemes(kChromeUIScheme, kChromeDevToolsScheme),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+                          CONTENT_SETTING_ASK),
+@@ -199,7 +199,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_MEDIASTREAM_CAMERA, "media-stream-camera",
+-           CONTENT_SETTING_ASK, WebsiteSettingsInfo::UNSYNCABLE,
++           CONTENT_SETTING_BLOCK, WebsiteSettingsInfo::UNSYNCABLE,
+            WhitelistedSchemes(kChromeUIScheme, kChromeDevToolsScheme),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+                          CONTENT_SETTING_ASK),
+@@ -228,7 +228,7 @@
+                WebsiteSettingsRegistry::PLATFORM_ANDROID,
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+-  Register(CONTENT_SETTINGS_TYPE_MIDI_SYSEX, "midi-sysex", CONTENT_SETTING_ASK,
++  Register(CONTENT_SETTINGS_TYPE_MIDI_SYSEX, "midi-sysex", CONTENT_SETTING_BLOCK,
+            WebsiteSettingsInfo::SYNCABLE, WhitelistedSchemes(),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+                          CONTENT_SETTING_ASK),
+@@ -238,7 +238,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_PROTECTED_MEDIA_IDENTIFIER,
+-           "protected-media-identifier", CONTENT_SETTING_ASK,
++           "protected-media-identifier", CONTENT_SETTING_BLOCK,
+            WebsiteSettingsInfo::UNSYNCABLE, WhitelistedSchemes(),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK,
+                          CONTENT_SETTING_ASK),
+@@ -258,7 +258,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_BACKGROUND_SYNC, "background-sync",
+-           CONTENT_SETTING_ALLOW, WebsiteSettingsInfo::UNSYNCABLE,
++           CONTENT_SETTING_BLOCK, WebsiteSettingsInfo::UNSYNCABLE,
+            WhitelistedSchemes(),
+            ValidSettings(CONTENT_SETTING_ALLOW, CONTENT_SETTING_BLOCK),
+            WebsiteSettingsInfo::REQUESTING_ORIGIN_ONLY_SCOPE,
+@@ -310,7 +310,7 @@
+            ContentSettingsInfo::INHERIT_IF_LESS_PERMISSIVE);
+ 
+   Register(CONTENT_SETTINGS_TYPE_BLUETOOTH_GUARD, "bluetooth-guard",
+-           CONTENT_SETTING_ASK, WebsiteSettingsInfo::UNSYNCABLE,
++           CONTENT_SETTING_BLOCK, WebsiteSettingsInfo::UNSYNCABLE,
+            WhitelistedSchemes(),
+            ValidSettings(CONTENT_SETTING_ASK, CONTENT_SETTING_BLOCK),
+            WebsiteSettingsInfo::REQUESTING_ORIGIN_AND_TOP_LEVEL_ORIGIN_SCOPE,

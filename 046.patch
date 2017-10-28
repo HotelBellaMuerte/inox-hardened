@@ -1,0 +1,19 @@
+--- a/components/metrics/metrics_service.cc	2017-10-04 18:07:39.000000000 -0400
++++ b/components/metrics/metrics_service.cc	2017-10-08 20:16:35.352510270 -0400
+@@ -131,6 +131,7 @@
+ 
+ #include "base/bind.h"
+ #include "base/callback.h"
++#include "base/command_line.h"
+ #include "base/location.h"
+ #include "base/memory/ptr_util.h"
+ #include "base/metrics/histogram_base.h"
+@@ -811,6 +812,8 @@
+ void MetricsService::RegisterMetricsProvider(
+     std::unique_ptr<MetricsProvider> provider) {
+   DCHECK_EQ(INITIALIZED, state_);
++  if (!base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics"))
++    return;
+   delegating_provider_.RegisterMetricsProvider(std::move(provider));
+ }
+ 

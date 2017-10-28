@@ -1,0 +1,11 @@
+--- a/chrome/service/cloud_print/connector_settings.cc	2017-10-04 18:07:37.000000000 -0400
++++ b/chrome/service/cloud_print/connector_settings.cc	2017-10-08 19:08:38.367005034 -0400
+@@ -60,7 +60,7 @@
+   DCHECK(server_url_.is_valid());
+ 
+   connect_new_printers_ = prefs->GetBoolean(
+-      prefs::kCloudPrintConnectNewPrinters, true);
++      prefs::kCloudPrintConnectNewPrinters, false);
+ 
+   xmpp_ping_enabled_ = prefs->GetBoolean(
+       prefs::kCloudPrintXmppPingEnabled, false);

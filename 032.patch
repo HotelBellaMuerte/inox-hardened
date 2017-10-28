@@ -1,0 +1,25 @@
+--- a/components/component_updater/configurator_impl.cc	2017-10-04 18:07:38.000000000 -0400
++++ b/components/component_updater/configurator_impl.cc	2017-10-08 19:38:02.631648860 -0400
+@@ -138,22 +138,6 @@
+ 
+ std::vector<GURL> ConfiguratorImpl::UpdateUrl() const {
+   std::vector<GURL> urls;
+-  if (url_source_override_.is_valid()) {
+-    urls.push_back(GURL(url_source_override_));
+-    return urls;
+-  }
+-
+-  if (base::FeatureList::IsEnabled(kAlternateComponentUrls)) {
+-    urls.push_back(GURL(kUpdaterDefaultUrlAlt));
+-    urls.push_back(GURL(kUpdaterFallbackUrlAlt));
+-  } else {
+-    urls.push_back(GURL(kUpdaterDefaultUrl));
+-    urls.push_back(GURL(kUpdaterFallbackUrl));
+-  }
+-
+-  if (require_encryption_)
+-    update_client::RemoveUnsecureUrls(&urls);
+-
+   return urls;
+ }
+ 

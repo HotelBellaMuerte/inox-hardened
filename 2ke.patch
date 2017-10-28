@@ -1,0 +1,36 @@
+--- a/components/safe_browsing/features.cc	2017-10-11 15:10:28.000000000 -0400
++++ b/components/safe_browsing/features.cc	2017-10-15 11:00:50.754740977 -0400
+@@ -43,13 +43,13 @@
+                                       base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kPasswordFieldOnFocusPinging{
+-    "PasswordFieldOnFocusPinging", base::FEATURE_ENABLED_BY_DEFAULT};
++    "PasswordFieldOnFocusPinging", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kPasswordProtectionInterstitial{
+     "PasswordProtectionInterstitial", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kProtectedPasswordEntryPinging{
+-    "ProtectedPasswordEntryPinging", base::FEATURE_ENABLED_BY_DEFAULT};
++    "ProtectedPasswordEntryPinging", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kThreatDomDetailsTagAndAttributeFeature{
+     "ThreatDomDetailsTagAttributes", base::FEATURE_DISABLED_BY_DEFAULT};
+@@ -71,13 +71,13 @@
+   bool probabilistically_enabled;
+ } kExperimentalFeatures[]{
+     {&kAdSamplerTriggerFeature, false},
+-    {&kGaiaPasswordReuseReporting, true},
++    {&kGaiaPasswordReuseReporting, false},
+     {&kGoogleBrandedPhishingWarning, false},
+-    {&kLocalDatabaseManagerEnabled, true},
++    {&kLocalDatabaseManagerEnabled, false},
+     {&kParallelUrlCheck, true},
+-    {&kPasswordFieldOnFocusPinging, true},
++    {&kPasswordFieldOnFocusPinging, false},
+     {&kPasswordProtectionInterstitial, false},
+-    {&kProtectedPasswordEntryPinging, true},
++    {&kProtectedPasswordEntryPinging, false},
+     {&kThreatDomDetailsTagAndAttributeFeature, false},
+     {&kTriggerThrottlerDailyQuotaFeature, false},
+     {&kV4OnlyEnabled, true},

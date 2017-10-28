@@ -1,0 +1,27 @@
+--- a/chrome/browser/BUILD.gn	2017-10-04 18:07:33.000000000 -0400
++++ b/chrome/browser/BUILD.gn	2017-10-09 15:12:59.031476033 -0400
+@@ -1514,6 +1514,7 @@
+     "//content/public/browser",
+     "//ipc",
+     "//sql",
++    "//chrome/common:service_process_mojom",
+   ]
+   deps = [
+     ":active_use_util",
+@@ -2561,7 +2562,7 @@
+         "service_process/service_process_control.h",
+         "service_process/service_process_control_mac.mm",
+       ]
+-      deps += [ "//chrome/common:service_process_mojom" ]
++      public_deps += [ "//chrome/common:service_process_mojom" ]
+     } else {
+       # Partial-only printing support.
+       sources += [
+@@ -4683,6 +4684,7 @@
+     "//testing/gtest",
+     "//third_party/WebKit/public:blink_headers",
+   ]
++      public_deps += [ "//chrome/common:service_process_mojom" ]
+ }
+ 
+ if (enable_rlz_support) {

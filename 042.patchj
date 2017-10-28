@@ -1,0 +1,23 @@
+--- base/metrics/histogram_base.cc	2017-10-04 18:07:32.000000000 -0400
++++ base/metrics/histogram_base.cc.new	2017-10-08 20:01:20.039295887 -0400
+@@ -9,6 +9,7 @@
+ #include <memory>
+ #include <utility>
+ 
++#include "base/command_line.h"
+ #include "base/json/json_string_value_serializer.h"
+ #include "base/logging.h"
+ #include "base/metrics/histogram.h"
+@@ -60,6 +61,12 @@
+   }
+ }
+ 
++const std::string& HistogramBase::kDummyName = "Dummy";
++const std::string& HistogramBase::kDummySparseName = "DummySparse";
++bool HistogramBase::MetricsEnabled() {
++  return base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics");
++}
++
+ const HistogramBase::Sample HistogramBase::kSampleType_MAX = INT_MAX;
+ HistogramBase* HistogramBase::report_histogram_ = nullptr;
+ 

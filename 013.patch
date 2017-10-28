@@ -1,0 +1,11 @@
+--- a/components/content_settings/core/browser/cookie_settings.cc	2017-10-04 18:07:38.000000000 -0400
++++ b/components/content_settings/core/browser/cookie_settings.cc	2017-10-08 18:59:16.257098393 -0400
+@@ -80,7 +80,7 @@
+ void CookieSettings::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterBooleanPref(
+-      prefs::kBlockThirdPartyCookies, false,
++      prefs::kBlockThirdPartyCookies, true,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+ }
+ 

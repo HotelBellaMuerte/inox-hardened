@@ -1,0 +1,24 @@
+--- a/chrome/browser/safe_browsing/client_side_detection_service.cc	2017-10-11 15:10:23.000000000 -0400
++++ b/chrome/browser/safe_browsing/client_side_detection_service.cc	2017-10-15 10:55:49.947993004 -0400
+@@ -338,7 +338,9 @@
+   info->phishing_url = GURL(request->url());
+   client_phishing_reports_[fetcher_ptr] = std::move(info);
+ 
+-  fetcher_ptr->SetLoadFlags(net::LOAD_DISABLE_CACHE);
++  fetcher_ptr->SetLoadFlags(net::LOAD_DO_NOT_SAVE_COOKIES |
++                            net::LOAD_DO_NOT_SEND_COOKIES |
++                            net::LOAD_DISABLE_CACHE);
+   fetcher_ptr->SetRequestContext(request_context_getter_.get());
+   fetcher_ptr->SetUploadData("application/octet-stream", request_data);
+   fetcher_ptr->Start();
+@@ -414,7 +416,9 @@
+   info->original_url = GURL(request->url());
+   client_malware_reports_[fetcher_ptr] = std::move(info);
+ 
+-  fetcher_ptr->SetLoadFlags(net::LOAD_DISABLE_CACHE);
++  fetcher_ptr->SetLoadFlags(net::LOAD_DO_NOT_SAVE_COOKIES |
++                            net::LOAD_DO_NOT_SEND_COOKIES |
++                            net::LOAD_DISABLE_CACHE);
+   fetcher_ptr->SetRequestContext(request_context_getter_.get());
+   fetcher_ptr->SetUploadData("application/octet-stream", request_data);
+   fetcher_ptr->Start();

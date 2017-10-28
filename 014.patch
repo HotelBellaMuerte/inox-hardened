@@ -1,0 +1,11 @@
+--- a/chrome/browser/ui/navigation_correction_tab_observer.cc	2017-10-04 18:07:36.000000000 -0400
++++ b/chrome/browser/ui/navigation_correction_tab_observer.cc	2017-10-08 19:00:13.277248865 -0400
+@@ -58,7 +58,7 @@
+ void NavigationCorrectionTabObserver::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* prefs) {
+   prefs->RegisterBooleanPref(prefs::kAlternateErrorPagesEnabled,
+-                             true,
++                             false,
+                              user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+ }
+ 

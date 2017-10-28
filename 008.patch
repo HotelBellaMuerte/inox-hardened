@@ -1,0 +1,13 @@
+--- a/chrome/browser/chrome_content_browser_client.cc	2017-10-04 18:07:33.000000000 -0400
++++ b/chrome/browser/chrome_content_browser_client.cc	2017-10-08 18:51:56.352033250 -0400
+@@ -832,8 +832,8 @@
+ // static
+ void ChromeContentBrowserClient::RegisterProfilePrefs(
+     user_prefs::PrefRegistrySyncable* registry) {
+-  registry->RegisterBooleanPref(prefs::kDisable3DAPIs, false);
+-  registry->RegisterBooleanPref(prefs::kEnableHyperlinkAuditing, true);
++  registry->RegisterBooleanPref(prefs::kDisable3DAPIs, true);
++  registry->RegisterBooleanPref(prefs::kEnableHyperlinkAuditing, false);
+   registry->RegisterListPref(prefs::kEnableDeprecatedWebPlatformFeatures);
+ }
+ 

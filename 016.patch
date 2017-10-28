@@ -1,0 +1,11 @@
+--- a/chrome/browser/resources/settings/reset_page/reset_profile_dialog.html	2017-10-04 18:07:35.000000000 -0400
++++ b/chrome/browser/resources/settings/reset_page/reset_profile_dialog.html	2017-10-08 19:02:23.340773765 -0400
+@@ -45,7 +45,7 @@
+         </paper-button>
+       </div>
+       <div slot="footer">
+-        <paper-checkbox id="sendSettings" checked>
++        <paper-checkbox id="sendSettings">
+           $i18nRaw{resetPageFeedback}</paper-checkbox>
+       </div>
+     </dialog>
