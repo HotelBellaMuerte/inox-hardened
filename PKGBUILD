@@ -6,7 +6,7 @@
 
 pkgname=inox
 name=chromium
-pkgver=62.0.3202.75
+pkgver=62.0.3202.89
 pkgrel=1
 _launcher_ver=5
 pkgdesc="A web browser built for speed, simplicity, and security"
@@ -24,84 +24,86 @@ optdepends=('pepper-flash: support for Flash content'
 install=chromium.install
 source=(https://commondatastorage.googleapis.com/chromium-browser-official/$name-$pkgver.tar.xz
         chromium-launcher-$_launcher_ver.tar.gz::https://github.com/foutrelis/chromium-launcher/archive/v$_launcher_ver.tar.gz
-        inox.desktop
-        breakpad-use-ucontext_t.patch
-        crc32c-string-view-check.patch
-        chromium-gn-bootstrap-r17.patch
-001.patch
-002.patch
-004.patch
-005.patch
-006.patch
-007.patch
-008.patch
-009.patch
-010.patch
-011.patch
-012.patch
-013.patch
-014.patch
-015.patch
-016.patch
-2kb.patch
-018.patch
-019.patch
-020.patch
-021.patch
-022.patch
-023.patch
-024.patch
-025.patch
-026.patch
-027.patch
-029.patch
-030.patch
-031.patch
-032.patch
-034.patch
-035.patch
-036.patch
-037.patch
-038.patch
-12.patch
-16.patch
-20.patch
-9k.patch
-048.patch
-gna.patch
-gnb.patch
-1992.patch
-2992.patch
-2ka.patch
-product_logo_{16,22,24,32,48,64,128,256}.png
-2kc.patch
-2kd.patch
-2ke.patch
-2kf.patch
-2kg.patch
-2kh.patch
-2ki.patch
-na.patch
-nb.patch
-nc.patch
-nd.patch
-a.patch
-b.patch
-c.patch
-d.patch
-e.patch
-k.patch
-l.patch
-l2.patch
-l3.patch
-m.patch
-n.patch
-o.patch
-p.patch
-888.patch
+        https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/inox.desktop
+        https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/breakpad-use-ucontext_t.patch
+        https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/crc32c-string-view-check.patch
+        https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/chromium-gn-bootstrap-r17.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/001.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/002.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/004.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/005.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/006.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/007.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/008.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/009.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/010.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/011.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/012.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/013.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/014.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/015.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/016.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kb.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/018.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/019.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/020.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/021.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/022.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/023.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/024.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/025.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/026.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/027.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/029.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/030.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/031.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/032.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/034.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/035.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/036.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/037.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/038.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/12.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/16.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/20.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/9k.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/048.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/gna.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/gnb.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/1992.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2992.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2ka.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/product_logo_{16,22,24,32,48,64,128,256}.png
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kc.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kd.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2ke.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kf.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kg.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2kh.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/2ki.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/na.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/nb.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/nc.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/nd.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/a.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/b.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/c.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/d.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/e.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/k.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/l.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/l2.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/l3.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/m.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/n.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/o.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/p.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/888.patch
+https://raw.githubusercontent.com/bn0785ac/inox-hardened/master/hell.patch
 )
 
-sha256sums=('f9d7b6c2222d8b335bdebe616650ea76a0db9993879698d8d336f24df9f0eda1'
+
+sha256sums=('49cdfe457bcb941b56c13a75bbe2ff394fcb5baa8a49c9b470835fad60dd904c'
             '4dc3428f2c927955d9ae117f2fb24d098cc6dd67adb760ac9c82b522ec8b0587'
             'ff3f939a8757f482c1c5ba35c2c0f01ee80e2a2273c16238370081564350b148'
             '6e9a345f810d36068ee74ebba4708c70ab30421dad3571b6be5e9db635078ea8'
@@ -113,7 +115,7 @@ sha256sums=('f9d7b6c2222d8b335bdebe616650ea76a0db9993879698d8d336f24df9f0eda1'
             'aeed949aeb22d53dd1d7a97823ffd109f875557e27937a784d05c2931c61ed41'
             '5c8c3ad7d5b4ebda7508e3aee13349fc8ad627d7a7e3147168e214f03e433168'
             '085c00b8f760b2262218ef772038a0d439bf208d61664ae15cf6088cc142fe47'
-            '9841774a5b7943b4f80ff9aed69657cbd0c59fc9453b76141449e84b3afbbdd5'
+            '8696919f69ef927f095944ae7ef869b283450a4b2cdd4efdebc51fc2b1e747e0'
             'bd233779119f47a6f25d562dee0f725b47cf88b646a4828fd2c517d46839fd3e'
             'fd5fdc83665113677951e2e713a4696d999a070d6b59bb57319df357b35d4fad'
             '3850ad42d0cb4ca011d46b9d569a0a2bf83476f0c3da70c74d4f011cec59f885'
@@ -122,7 +124,7 @@ sha256sums=('f9d7b6c2222d8b335bdebe616650ea76a0db9993879698d8d336f24df9f0eda1'
             'f6a4c02feb5b21f1814d0b835b94a8b6222628ff97800b5411dc86852bfa5883'
             '579b13e755ef6b6e284a44576db394c05c982be9f1dfc9435fe4966c07288c25'
             'f4af2787f31abe66ab1180affed6f4c97daaad9151de429c9f5dc3e223cc8d87'
-            '917c0e0d3fc770e9ded0162127c99bc378a13ad723ad2b27fd93bc09e029c4ad'
+            '7ae51e5bd3c0dad1007cbf4991d7a68bcc76919f0247856328e1db65aedf8f91'
             '1632b2d3b9062e6ec8872b9df180f82a93099a50eda6f15125ffe56dd45beca6'
             'b36ed3b00353f5c216e017e8ca7bb9798e81a61bd78cf757fcaebf54d2c04c26'
             'b35247d9ca4a7a40d9ca59e95ee9457245d903542e4c29033d200b6198396820'
@@ -149,8 +151,9 @@ sha256sums=('f9d7b6c2222d8b335bdebe616650ea76a0db9993879698d8d336f24df9f0eda1'
             '814fa3b82c8330b944b138ece864be4761fe17f42061816028b5d8c1f2609c8a'
             '8f7d2baca6d96b1e668c8c2bcb1efe5daa0e1cb33de89e12165ea22c73ce8741'
             '802ef62dc1703980c9ac9358bbc3dae7f22fecb931aafa049207fbdd70afb89d'
-            '91ce5a9d24ea7d24131ec0f81b0e5ce674c657440e8d7c549af44a4464865633'
-            'a051ba475edbfb9ee779a2109a4f5ffbaaaa5447cf364d151ae059b847a8fe4d'
+            '46737febb7ad2e906305e69f640a10f926e47bb764e7bcca8c16b340bb29fcf1'
+            'f525b21d0c57051865197a709c794896a7ebcee47e62a60bd9cd1298f8e0b08b'
+            '73a73b6551595c7bbe4eff6ab8cb5cd110cb62675c855370fc2121ec2e127be3'
             '71471fa4690894420f9e04a2e9a622af620d92ac2714a35f9a4c4e90fa3968dd'
             '4a533acefbbc1567b0d74a1c0903e9179b8c59c1beabe748850795815366e509'
             '7b88830c5e0e9819f514ad68aae885d427541a907e25607e47dee1b0f38975fd'
@@ -158,7 +161,33 @@ sha256sums=('f9d7b6c2222d8b335bdebe616650ea76a0db9993879698d8d336f24df9f0eda1'
             'cc08b771d83b7434c3173c27419bc7d1d4ee375256f3169ef2b9333ba1f2beeb'
             '53a1e8da18069eb4d6ab3af9c923c22a0f020241a4839c3140e3601052ddf6ff'
             '896993987d4ef9f0ac7db454f288117316c2c80ed0b6764019afd760db222dad'
-            '3df9b3bbdc07fde63d9e400954dcc6ab6e0e5454f0ef6447570eef0549337354')
+            '3df9b3bbdc07fde63d9e400954dcc6ab6e0e5454f0ef6447570eef0549337354'
+            '3fad36de0df6bf61047561ce18d5f08b66fb232aa3e80f82e4a0408a758f3f61'
+            'f4122246d8d4898937de2f221248b8452fd3d24058b1d27005349e245c051e79'
+            '723c03ed41091807363efadbbdbfda8dcfef5ca28f706882e41acabf913bdea8'
+            '518edcadb1538bbcc3309039b9f7d7cff978f90ee9d547000a7e6821d5fa2d13'
+            '776c4a7c55f406700714d427061556868d80ec786a2521a5e4660576b18c3d79'
+            'cdc55ec692caffb02fba826308c6e39b0045674460098bda085237f2123798a0'
+            '5a8b8c2bd45dd2f057b9d8b803b33661fb4ffe89ef35ecc5e61f44fe24c07a74'
+            '127747c5c692b0b0ef62f0e6ae79c894cd4798846bba53bf23b0b8bbe6974ba0'
+            '065a69ca6547e89f84ded7b95e29a7fb3ac762eaac3aa940ab1ec5a3ecbe3a2f'
+            '0526518bd42da73113a88a440739a50fb85fb0c1e8528b1a8340747d901e3f5b'
+            'c367599e25bd9d408d52dd26ceec9f0048b0991cc74980c8c40d602e61a2a844'
+            'b54a69d6eeb03bf56e5a6430cbc07fd8d12532709876d38828e4c455eca29e3b'
+            'dc5b12678bea3a694a722e3e88277300c4a15050ceb35c9f7d873a5f8ab1ba54'
+            '54a1ef701be320915ac271daf26e055c528633667bc7ecdffa2870b4d71f54af'
+            'fb3abae54309adf69b98bd2435fbc23f17bc526dbf1d1e97907da87e7cf0aeed'
+            'a92129a1d018906a299b9b05c4a96375b115fdd6a3c019d3b326a30a4c107181'
+            '2f1f0aa9592fad53ce9bc07fc91193257874247cf604421aac7e60911b2a6804'
+            'ec350d3afdd23e3fdd51f0168244a33051cea9671ffdc4e455ddba3fc0da8349'
+            '4e6c51c78d1990731ecec5240bb6d07bff6ce0562d94725892693ee4a50fb4bb'
+            '698ffaa7d99a10c51cf19e31f5bafb071da91e780e738f401f2152877e527449'
+            '399e1e6dd0d83fc9af2b74817db730661b963e99befc172a1ce0717f869575e6'
+            'a72bfdbea4e1bf9c273a78ef9c186968b1e7dd3e993a4a381488d8b9c9613552'
+            '502b4eca6edf10fe1d036ab2c65363b4300de91b381ce687e08bd96dc254c898'
+            '0d7c128d362697e3ba80b7647826f8577b6fadea32462ad6fa37c877bc8f7643'
+            '84d61c7ccc1e99dd593970bfff1cbc030b586cc90531541d17323e6b92f15230'
+            '2716f2b1905dd909a82d29c942e130618d904bb7e36f03d14d4153e596b7655f')
 
 
 # Possible replacements are listed in build/linux/unbundle/replace_gn_files.py
@@ -243,7 +272,7 @@ patch -Np1 -i ../036.patch
 patch -Np1 -i ../037.patch
 patch -Np1 -i ../038.patch
 patch -Np1 -i ../888.patch
-
+patch -Np1 -i ../hell.patch
 
 msg2 'Cut media router'
 patch -Np1 -i ../1992.patch
