@@ -1,25 +1,31 @@
---- a/components/translate/core/browser/translate_ranker_impl.cc	2017-10-04 18:07:40.000000000 -0400
-+++ b/components/translate/core/browser/translate_ranker_impl.cc.new	2017-10-08 19:36:54.503727317 -0400
-@@ -144,11 +144,9 @@
+--- a/components/translate/core/browser/translate_ranker_impl.cc	2017-10-19 17:44:31.145093505 -0400
++++ b/components/translate/core/browser/translate_ranker_impl.cc	2017-10-19 17:45:47.252701657 -0400
+@@ -148,14 +148,10 @@
                                           ukm::UkmRecorder* ukm_recorder)
      : ukm_recorder_(ukm_recorder),
        is_logging_enabled_(false),
 -      is_query_enabled_(base::FeatureList::IsEnabled(kTranslateRankerQuery)),
 -      is_enforcement_enabled_(
 -          base::FeatureList::IsEnabled(kTranslateRankerEnforcement)),
--      is_decision_override_enabled_(base::FeatureList::IsEnabled(
--          translate::kTranslateRankerDecisionOverride)),
+-      is_auto_blacklist_override_enabled_(base::FeatureList::IsEnabled(
+-          translate::kTranslateRankerAutoBlacklistOverride)),
+-      is_previous_language_matches_override_enabled_(
+-          base::FeatureList::IsEnabled(
+-              translate::kTranslateRankerPreviousLanguageMatchesOverride)),
 +      is_query_enabled_(false),
 +      is_enforcement_enabled_(false),
-+      is_decision_override_enabled_(false),
++      is_auto_blacklist_override_enabled_(false),
++      is_previous_language_matches_override_enabled_(false),
        weak_ptr_factory_(this) {
    if (is_query_enabled_ || is_enforcement_enabled_) {
      model_loader_ = base::MakeUnique<machine_intelligence::RankerModelLoader>(
-@@ -222,6 +220,8 @@
+@@ -229,6 +225,10 @@
    // (or become False).
    const bool kDefaultResponse = true;
  
 +  return kDefaultResponse;
++
++
 +
    translate_event->set_ranker_request_timestamp_sec(
        (base::TimeTicks::Now() - base::TimeTicks()).InSeconds());

@@ -9,12 +9,3 @@
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
  #if defined(OS_ANDROID)
    registry->RegisterStringPref(
-@@ -152,7 +152,7 @@
-   // This pref is intentionally outside the above #if. That flag corresponds
-   // to the Notifier extension and does not gate the launcher page.
-   // TODO(skare): Remove or rename ENABLE_GOOGLE_NOW: http://crbug.com/459827.
--  registry->RegisterBooleanPref(prefs::kGoogleNowLauncherEnabled, true);
-+  registry->RegisterBooleanPref(prefs::kGoogleNowLauncherEnabled, false);
-   registry->RegisterBooleanPref(prefs::kDisableExtensions, false);
- #if BUILDFLAG(ENABLE_EXTENSIONS)
-   registry->RegisterBooleanPref(extensions::pref_names::kAlertsInitialized,

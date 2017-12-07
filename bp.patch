@@ -1,0 +1,10 @@
+--- a/tools/gn/bootstrap/bootstrap.py	2017-10-19 14:32:47.370650536 -0400
++++ b/tools/gn/bootstrap/bootstrap.py	2017-10-19 14:57:31.691097462 -0400
+@@ -536,7 +536,6 @@
+       'base/threading/thread_local_storage.cc',
+       'base/threading/thread_restrictions.cc',
+       'base/threading/thread_task_runner_handle.cc',
+-      'base/threading/worker_pool.cc',
+       'base/time/clock.cc',
+       'base/time/default_clock.cc',
+       'base/time/default_tick_clock.cc',

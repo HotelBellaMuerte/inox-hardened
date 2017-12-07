@@ -1,5 +1,5 @@
---- chrome/browser/ui/startup/startup_tab_provider.cc	2017-10-18 17:59:46.753324198 -0400
-+++ chrome/browser/ui/startup/startup_tab_provider.cc.new	2017-10-18 17:59:14.879923757 -0400
+--- a/chrome/browser/ui/startup/startup_tab_provider.cc	2017-10-18 17:59:46.753324198 -0400
++++ b/chrome/browser/ui/startup/startup_tab_provider.cc	2017-10-18 17:59:14.879923757 -0400
 @@ -189,12 +189,6 @@
  StartupTabs StartupTabProviderImpl::GetStandardOnboardingTabsForState(
      const StandardOnboardingTabsParams& params) {

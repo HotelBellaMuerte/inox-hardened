@@ -1,11 +1,11 @@
 --- a/components/autofill/core/browser/autofill_manager.cc	2017-10-04 18:07:38.000000000 -0400
 +++ b/components/autofill/core/browser/autofill_manager.cc	2017-10-08 19:01:33.810724577 -0400
-@@ -276,7 +276,7 @@
+@@ -275,7 +275,7 @@
+   registry->RegisterIntegerPref(
        prefs::kAutofillCreditCardSigninPromoImpressionCount, 0);
    registry->RegisterBooleanPref(
-       prefs::kAutofillEnabled,
--      true,
-+      false,
+-      prefs::kAutofillEnabled, true,
++      prefs::kAutofillEnabled, false,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
    registry->RegisterBooleanPref(
        prefs::kAutofillProfileUseDatesFixed, false,

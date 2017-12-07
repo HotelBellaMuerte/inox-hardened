@@ -1,0 +1,12 @@
+diff --git a/tools/gn/bootstrap/bootstrap.py b/tools/gn/bootstrap/bootstrap.py
+index 601d5331698e..f154ed2ef3e6 100755
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -4317,7 +4317,6 @@
+   sources = [
+     "predictors/resource_prefetch_predictor.proto",
+   ]
+-      public_deps += [ "//chrome/common:service_process_mojom" ]
+ }
+ 
+ grit("resources") {

@@ -1,14 +1,11 @@
 --- a/components/safe_browsing/features.cc	2017-10-11 15:10:28.000000000 -0400
 +++ b/components/safe_browsing/features.cc	2017-10-15 11:00:50.754740977 -0400
-@@ -43,13 +43,13 @@
+@@ -49,10 +49,10 @@
                                        base::FEATURE_DISABLED_BY_DEFAULT};
  
  const base::Feature kPasswordFieldOnFocusPinging{
 -    "PasswordFieldOnFocusPinging", base::FEATURE_ENABLED_BY_DEFAULT};
 +    "PasswordFieldOnFocusPinging", base::FEATURE_DISABLED_BY_DEFAULT};
- 
- const base::Feature kPasswordProtectionInterstitial{
-     "PasswordProtectionInterstitial", base::FEATURE_DISABLED_BY_DEFAULT};
  
  const base::Feature kProtectedPasswordEntryPinging{
 -    "ProtectedPasswordEntryPinging", base::FEATURE_ENABLED_BY_DEFAULT};
@@ -16,21 +13,24 @@
  
  const base::Feature kThreatDomDetailsTagAndAttributeFeature{
      "ThreatDomDetailsTagAttributes", base::FEATURE_DISABLED_BY_DEFAULT};
-@@ -71,13 +71,13 @@
-   bool probabilistically_enabled;
+@@ -75,15 +75,15 @@
  } kExperimentalFeatures[]{
+     {&kAdSamplerCollectButDontSendFeature, false},
      {&kAdSamplerTriggerFeature, false},
 -    {&kGaiaPasswordReuseReporting, true},
-+    {&kGaiaPasswordReuseReporting, false},
-     {&kGoogleBrandedPhishingWarning, false},
+-    {&kGoogleBrandedPhishingWarning, true},
 -    {&kLocalDatabaseManagerEnabled, true},
+-    {&kParallelUrlCheck, true},
++    {&kGaiaPasswordReuseReporting, false},
++    {&kGoogleBrandedPhishingWarning, false},
 +    {&kLocalDatabaseManagerEnabled, false},
-     {&kParallelUrlCheck, true},
--    {&kPasswordFieldOnFocusPinging, true},
-+    {&kPasswordFieldOnFocusPinging, false},
-     {&kPasswordProtectionInterstitial, false},
--    {&kProtectedPasswordEntryPinging, true},
-+    {&kProtectedPasswordEntryPinging, false},
++    {&kParallelUrlCheck, false},
+     {&kPasswordFieldOnFocusPinging, false},
+     {&kProtectedPasswordEntryPinging, false},
      {&kThreatDomDetailsTagAndAttributeFeature, false},
      {&kTriggerThrottlerDailyQuotaFeature, false},
-     {&kV4OnlyEnabled, true},
+-    {&kV4OnlyEnabled, true},
++    {&kV4OnlyEnabled, false},
+ };
+ 
+ // Adds the name and the enabled/disabled status of a given feature.
