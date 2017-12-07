@@ -1,0 +1,694 @@
+diff --git a/chrome/browser/resources/chromeos/mobile_setup.css b/chrome/browser/resources/chromeos/mobile_setup.css
+index 08fe480..6a83413cd 100644
+--- a/chrome/browser/resources/chromeos/mobile_setup.css
++++ b/chrome/browser/resources/chromeos/mobile_setup.css
+@@ -12,7 +12,7 @@
+   width: 100%;
+ }
+ 
+-iframe {
++webview {
+   overflow-x: scroll;
+   overflow-y: scroll;
+ }
+diff --git a/chrome/browser/resources/chromeos/mobile_setup.html b/chrome/browser/resources/chromeos/mobile_setup.html
+index cfdd6c1..2fa11e4 100644
+--- a/chrome/browser/resources/chromeos/mobile_setup.html
++++ b/chrome/browser/resources/chromeos/mobile_setup.html
+@@ -9,11 +9,12 @@
+ <script src="chrome://resources/js/cr.js"></script>
+ <script src="chrome://resources/js/util.js"></script>
+ <script src="chrome://resources/js/cr/ui/dialogs.js"></script>
++<script src="mobile_setup_util.js"></script>
+ <script src="mobile_setup.js"></script>
+ </head>
+ <body>
+  <div id="mainDiv" class="dialog-body">
+-  <iframe class="hidden" id="paymentForm" name="paymentForm" frameborder="0"></iframe>
++  <div id="portalFrame" class="hidden"></div>
+   <div id="systemStatus" class="overlay opaque-overlay hidden">
+     <div class="startup">
+       <div id="banner">
+@@ -28,7 +29,7 @@
+           </tr>
+         </tbody></table>
+       </div>
+-      <iframe id="carrierPage" name="carrierPage" frameborder="0"></iframe>
++      <webview id="carrierPage"></webview>
+     </div>
+   </div>
+   <div id="finalStatus" class="overlay translucent-black-overlay hidden">
+diff --git a/chrome/browser/resources/chromeos/mobile_setup.js b/chrome/browser/resources/chromeos/mobile_setup.js
+index d9f3d02..3ea9d19 100644
+--- a/chrome/browser/resources/chromeos/mobile_setup.js
++++ b/chrome/browser/resources/chromeos/mobile_setup.js
+@@ -2,7 +2,6 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+-
+ cr.define('mobile', function() {
+ 
+   function MobileSetup() {}
+@@ -31,18 +30,13 @@
+       MobileSetup.EXTENSION_PAGE_URL + '/activation.html';
+   MobileSetup.PORTAL_OFFLINE_PAGE_URL =
+       MobileSetup.EXTENSION_PAGE_URL + '/portal_offline.html';
+-  MobileSetup.REDIRECT_POST_PAGE_URL =
+-      MobileSetup.EXTENSION_PAGE_URL + '/redirect.html';
+ 
+   MobileSetup.prototype = {
+     // Mobile device information.
+     deviceInfo_: null,
+-    frameName_: '',
+     initialized_: false,
+     fakedTransaction_: false,
+     paymentShown_: false,
+-    frameLoadError_: 0,
+-    frameLoadIgnored_: true,
+     carrierPageUrl_: null,
+     spinnerInt_: -1,
+     // UI states.
+@@ -61,7 +55,6 @@
+       }
+       this.initialized_ = true;
+       self = this;
+-      this.frameName_ = frame_name;
+ 
+       cr.ui.dialogs.BaseDialog.OK_LABEL = loadTimeData.getString('ok_button');
+       cr.ui.dialogs.BaseDialog.CANCEL_LABEL =
+@@ -92,39 +85,110 @@
+       }
+     },
+ 
+-    onFrameLoaded_: function(success) {
+-      chrome.send('paymentPortalLoad', [success ? 'ok' : 'failed']);
++    /**
++     * Handler for loadabort event on the payment portal webview.
++     * Notifies Chrome that the payment portal load failed.
++     * @param {string} paymentUrl The payment portal URL, as provided by the
++     *     cellular service.
++     * @param {!Object} evt Load abort event.
++     * @private
++     */
++    paymentLoadAborted_: function(paymentUrl, evt) {
++      if (!evt.isTopLevel ||
++          new URL(evt.url).origin != new URL(paymentUrl).origin) {
++        return;
++      }
++      chrome.send('paymentPortalLoad', ['failed']);
+     },
+ 
++    /**
++     * Handler for loadcommit event on the payment portal webview.
++     * Notifies Chrome that the payment portal was loaded.
++     * @param {string} paymentUrl The payment portal URL, as provided by the
++     *     cellular service.
++     * @param {!Object} evt Load commit event.
++     * @private
++     */
++    paymentLoadCommitted_: function(paymentUrl, evt) {
++      if (!evt.isTopLevel ||
++          new URL(evt.url).origin != new URL(paymentUrl).origin) {
++        return;
++      }
++
++      chrome.send('paymentPortalLoad', ['ok']);
++    },
++
++    /**
++     * Sends a <code>loadedInWebview</code> message to the mobile service
++     * portal webview.
++     * @param {string} paymentUrl The payment portal URL - used to restrict
++     *     origins to which the message is sent.
++     */
++    sendInitialMessage_: function(paymentUrl) {
++      $('portalFrameWebview')
++          .contentWindow.postMessage({msg: 'loadedInWebview'}, paymentUrl);
++    },
++
++    /**
++     * Loads payment URL defined by <code>deviceInfo</code> into the
++     * portal frame webview.
++     * If the webview element already exists, it will not be reused - the
++     * existing webview will be removed from DOM, and a new one will be
++     * created.
++     * If deviceInfo provides post data to be sent to the payment URL, the
++     * webview will be initilized using
++     * <code>mobile.util.postDeviceDataToWebview</code>, otherwise the payment
++     * URL will be loaded directly into the webview.
++     *
++     * Note that the portal frame webview will only ever contain data and web
++     * URLs - it will never embed the mobile setup extension resources.
++     *
++     * @param {!Object} deviceInfo The cellular service info - contains the
++     *     information that should be passed to the payment portal.
++     * @private
++     */
+     loadPaymentFrame_: function(deviceInfo) {
+-      if (deviceInfo) {
+-        this.frameLoadError_ = 0;
+-        this.deviceInfo_ = deviceInfo;
+-        if (deviceInfo.post_data && deviceInfo.post_data.length) {
+-          this.frameLoadIgnored_ = true;
+-          $(this.frameName_).contentWindow.location.href =
+-              MobileSetup.REDIRECT_POST_PAGE_URL +
+-              '?post_data=' + escape(deviceInfo.post_data) +
+-              '&formUrl=' + escape(deviceInfo.payment_url);
+-        } else {
+-          this.frameLoadIgnored_ = false;
+-          $(this.frameName_).contentWindow.location.href =
+-              deviceInfo.payment_url;
+-        }
++      if (!deviceInfo)
++        return;
++      this.deviceInfo_ = deviceInfo;
++
++      var existingWebview = $('portalFrameWebview');
++      if (existingWebview)
++        existingWebview.remove();
++
++      var frame = document.createElement('webview');
++      frame.id = 'portalFrameWebview';
++
++      $('portalFrame').appendChild(frame);
++
++      frame.addEventListener(
++          'loadabort',
++          this.paymentLoadAborted_.bind(this, deviceInfo.payment_url));
++
++      frame.addEventListener(
++          'loadcommit',
++          this.paymentLoadCommitted_.bind(this, deviceInfo.payment_url));
++
++      // Send a message to the loaded webview, so it can get a reference to
++      // which to send messages as needed.
++      frame.addEventListener(
++          'loadstop',
++          this.sendInitialMessage_.bind(this, deviceInfo.payment_url));
++
++      if (deviceInfo.post_data && deviceInfo.post_data.length) {
++        mobile.util.postDeviceDataToWebview(frame, deviceInfo);
++      } else {
++        frame.src = deviceInfo.payment_url;
+       }
+     },
+ 
+     onMessageReceived_: function(e) {
+       if (e.origin !=
+-              this.deviceInfo_.payment_url.substring(0, e.origin.length) &&
+-          e.origin != MobileSetup.EXTENSION_PAGE_URL)
++          this.deviceInfo_.payment_url.substring(0, e.origin.length))
+         return;
+ 
+       if (e.data.type == 'requestDeviceInfoMsg') {
+         this.sendDeviceInfo_();
+-      } else if (e.data.type == 'framePostReady') {
+-        this.frameLoadIgnored_ = false;
+-        this.sendPostFrame_(e.origin);
+       } else if (e.data.type == 'reportTransactionStatusMsg') {
+         console.log('calling setTransactionStatus from onMessageReceived_');
+         chrome.send('setTransactionStatus', [e.data.status]);
+@@ -153,14 +217,15 @@
+         case MobileSetup.PLAN_ACTIVATION_START_OTASP:
+         case MobileSetup.PLAN_ACTIVATION_RECONNECTING:
+         case MobileSetup.PLAN_ACTIVATION_RECONNECTING_PAYMENT:
+-          // Activation page should not be shown for the simple activation flow.
++          // Activation page should not be shown for the simple activation
++          // flow.
+           if (simpleActivationFlow)
+             break;
+ 
+           $('statusHeader').textContent =
+               loadTimeData.getString('connecting_header');
+           $('auxHeader').textContent = loadTimeData.getString('please_wait');
+-          $('paymentForm').classList.add('hidden');
++          $('portalFrame').classList.add('hidden');
+           $('finalStatus').classList.add('hidden');
+           this.setCarrierPage_(MobileSetup.ACTIVATION_PAGE_URL);
+           $('systemStatus').classList.remove('hidden');
+@@ -170,14 +235,15 @@
+         case MobileSetup.PLAN_ACTIVATION_TRYING_OTASP:
+         case MobileSetup.PLAN_ACTIVATION_INITIATING_ACTIVATION:
+         case MobileSetup.PLAN_ACTIVATION_OTASP:
+-          // Activation page should not be shown for the simple activation flow.
++          // Activation page should not be shown for the simple activation
++          // flow.
+           if (simpleActivationFlow)
+             break;
+ 
+           $('statusHeader').textContent =
+               loadTimeData.getString('activating_header');
+           $('auxHeader').textContent = loadTimeData.getString('please_wait');
+-          $('paymentForm').classList.add('hidden');
++          $('portalFrame').classList.add('hidden');
+           $('finalStatus').classList.add('hidden');
+           this.setCarrierPage_(MobileSetup.ACTIVATION_PAGE_URL);
+           $('systemStatus').classList.remove('hidden');
+@@ -185,12 +251,13 @@
+           this.startSpinner_();
+           break;
+         case MobileSetup.PLAN_ACTIVATION_PAYMENT_PORTAL_LOADING:
+-          // Activation page should not be shown for the simple activation flow.
++          // Activation page should not be shown for the simple activation
++          // flow.
+           if (!simpleActivationFlow) {
+             $('statusHeader').textContent =
+                 loadTimeData.getString('connecting_header');
+             $('auxHeader').textContent = '';
+-            $('paymentForm').classList.add('hidden');
++            $('portalFrame').classList.add('hidden');
+             $('finalStatus').classList.add('hidden');
+             this.setCarrierPage_(MobileSetup.ACTIVATION_PAGE_URL);
+             $('systemStatus').classList.remove('hidden');
+@@ -212,7 +279,7 @@
+           $('statusHeader').textContent = statusHeaderText;
+           $('auxHeader').textContent = '';
+           $('auxHeader').classList.add('hidden');
+-          $('paymentForm').classList.add('hidden');
++          $('portalFrame').classList.add('hidden');
+           $('finalStatus').classList.add('hidden');
+           $('systemStatus').classList.remove('hidden');
+           this.setCarrierPage_(carrierPage);
+@@ -224,7 +291,7 @@
+           $('auxHeader').textContent = '';
+           $('finalStatus').classList.add('hidden');
+           $('systemStatus').classList.add('hidden');
+-          $('paymentForm').classList.remove('hidden');
++          $('portalFrame').classList.remove('hidden');
+           $('canvas').classList.add('hidden');
+           this.stopSpinner_();
+           this.paymentShown_ = true;
+@@ -241,7 +308,7 @@
+           $('finalStatus').classList.remove('hidden');
+           $('canvas').classList.add('hidden');
+           $('closeButton').classList.toggle('hidden', !this.paymentShown_);
+-          $('paymentForm').classList.toggle('hidden', !this.paymentShown_);
++          $('portalFrame').classList.toggle('hidden', !this.paymentShown_);
+           this.stopSpinner_();
+           break;
+         case MobileSetup.PLAN_ACTIVATION_ERROR:
+@@ -252,7 +319,7 @@
+           $('systemStatus').classList.add('hidden');
+           $('canvas').classList.add('hidden');
+           $('closeButton').classList.toggle('hidden', !this.paymentShown_);
+-          $('paymentForm').classList.toggle('hidden', !this.paymentShown_);
++          $('portalFrame').classList.toggle('hidden', !this.paymentShown_);
+           $('finalStatus').classList.remove('hidden');
+           this.stopSpinner_();
+           break;
+@@ -260,36 +327,24 @@
+       this.state_ = newState;
+     },
+ 
++    /**
++     * Embeds a URL into the <code>carrierPage</code> webview. The webview is
++     * ever expected to contain mobile setup extension URLs.
++     * @param {string} url The URL to embed into the carrierPage webview.
++     * @param
++     */
+     setCarrierPage_: function(url) {
+       if (this.carrierPageUrl_ == url)
+         return;
++
+       this.carrierPageUrl_ = url;
+-      $('carrierPage').contentWindow.location.href = url;
++      $('carrierPage').src = url;
+     },
+ 
+     updateDeviceStatus_: function(deviceInfo) {
+       this.changeState_(deviceInfo);
+     },
+ 
+-    portalFrameLoadError_: function(errorCode) {
+-      if (this.frameLoadIgnored_)
+-        return;
+-      console.log('Portal frame load error detected: ', errorCode);
+-      this.frameLoadError_ = errorCode;
+-    },
+-
+-    portalFrameLoadCompleted_: function() {
+-      if (this.frameLoadIgnored_)
+-        return;
+-      console.log('Portal frame load completed!');
+-      this.onFrameLoaded_(this.frameLoadError_ == 0);
+-    },
+-
+-    sendPostFrame_: function(frameUrl) {
+-      var msg = {type: 'postFrame'};
+-      $(this.frameName_).contentWindow.postMessage(msg, frameUrl);
+-    },
+-
+     sendDeviceInfo_: function() {
+       var msg = {
+         type: 'deviceInfoMsg',
+@@ -301,7 +356,7 @@
+           'MDN': this.deviceInfo_.MDN
+         }
+       };
+-      $(this.frameName_)
++      $('portalFrameWebview')
+           .contentWindow.postMessage(msg, this.deviceInfo_.payment_url);
+     }
+ 
+@@ -351,17 +406,13 @@
+     MobileSetup.getInstance().updateDeviceStatus_(deviceInfo);
+   };
+ 
+-  MobileSetup.portalFrameLoadError = function(errorCode) {
+-    MobileSetup.getInstance().portalFrameLoadError_(errorCode);
+-  };
++  MobileSetup.portalFrameLoadError = function(errorCode) {};
+ 
+-  MobileSetup.portalFrameLoadCompleted = function() {
+-    MobileSetup.getInstance().portalFrameLoadCompleted_();
+-  };
++  MobileSetup.portalFrameLoadCompleted = function() {};
+ 
+   MobileSetup.loadPage = function() {
+     mobile.MobileSetup.getInstance().initialize(
+-        'paymentForm', mobile.MobileSetup.ACTIVATION_PAGE_URL);
++        mobile.MobileSetup.ACTIVATION_PAGE_URL);
+   };
+ 
+   // Export
+diff --git a/chrome/browser/resources/chromeos/mobile_setup_portal.html b/chrome/browser/resources/chromeos/mobile_setup_portal.html
+index 8840c56..9fdd4ab 100644
+--- a/chrome/browser/resources/chromeos/mobile_setup_portal.html
++++ b/chrome/browser/resources/chromeos/mobile_setup_portal.html
+@@ -7,11 +7,12 @@
+ <link rel="stylesheet" href="mobile_setup.css"></link>
+ <script src="chrome://resources/js/cr.js"></script>
+ <script src="chrome://resources/js/util.js"></script>
++<script src="mobile_setup_util.js"></script>
+ <script src="mobile_setup_portal.js"></script>
+ </head>
+ <body>
+   <div id="mainDiv" class="dialog-body">
+-    <iframe id="portalFrame" name="portalFrame" frameborder="0" hidden></iframe>
++    <webview id="portalFrame" hidden></webview>
+     <div id="systemStatus" class="overlay opaque-overlay" hidden>
+       <div class="startup">
+         <div id="banner">
+@@ -28,7 +29,7 @@
+             </tbody>
+           </table>
+         </div>
+-        <iframe id="carrierPage" name="carrierPage" frameborder="0"></iframe>
++        <webview id="carrierPage"></webview>
+       </div>
+     </div>
+   </div>
+diff --git a/chrome/browser/resources/chromeos/mobile_setup_portal.js b/chrome/browser/resources/chromeos/mobile_setup_portal.js
+index 389dc0f..0b5bd3a 100644
+--- a/chrome/browser/resources/chromeos/mobile_setup_portal.js
++++ b/chrome/browser/resources/chromeos/mobile_setup_portal.js
+@@ -4,16 +4,19 @@
+ 
+ cr.define('mobile', function() {
+ 
+-  // TODO(tbarzic): Share code with mobile_setup.js.
++  /** @const {string} */
+   var EXTENSION_BASE_URL =
+       'chrome-extension://iadeocfgjdjdmpenejdbfeaocpbikmab/';
+-  var REDIRECT_POST_PAGE_URL = EXTENSION_BASE_URL + 'redirect.html?autoPost=1';
++  /** @const {string} */
+   var PORTAL_OFFLINE_PAGE_URL = EXTENSION_BASE_URL + 'portal_offline.html';
++  /** @const {string} */
+   var INVALID_DEVICE_INFO_PAGE_URL =
+       EXTENSION_BASE_URL + 'invalid_device_info.html';
+ 
++  /** @enum {number} */
+   var NetworkState = {UNKNOWN: 0, PORTAL_REACHABLE: 1, PORTAL_UNREACHABLE: 2};
+ 
++  /** @enum {number} */
+   var CarrierPageType = {NOT_SET: 0, PORTAL_OFFLINE: 1, INVALID_DEVICE_INFO: 2};
+ 
+   function PortalImpl() {
+@@ -72,12 +75,20 @@
+         // If the portal is reachable and device info is valid, set and show
+         // portalFrame; and hide system status displaying 'offline portal' page.
+         this.setPortalFrameIfNeeded_(this.deviceInfo_);
++        this.setCarrierPage_(CarrierPageType.NOT_SET);
+         $('portalFrame').hidden = false;
+         $('systemStatus').hidden = true;
+         this.stopSpinner_();
+       }
+     },
+ 
++    /**
++     * Updates the carrier page webview src, depending on the requested carrier
++     * page type. Note that the webview is expected to load only extension
++     * URLs - specifically, the mobile setup extension URLs.
++     * @param {CarrierPageType} type The requested carrier page type.
++     * @private
++     */
+     setCarrierPage_: function(type) {
+       // The page is already set, nothing to do.
+       if (type == this.carrierPageType_)
+@@ -85,21 +96,19 @@
+ 
+       switch (type) {
+         case CarrierPageType.PORTAL_OFFLINE:
+-          $('carrierPage').contentWindow.location.href =
+-              PORTAL_OFFLINE_PAGE_URL;
++          $('carrierPage').src = PORTAL_OFFLINE_PAGE_URL;
+           $('statusHeader').textContent =
+               loadTimeData.getString('portal_unreachable_header');
+           this.startSpinner_();
+           break;
+         case CarrierPageType.INVALID_DEVICE_INFO:
+-          $('carrierPage').contentWindow.location.href =
+-              INVALID_DEVICE_INFO_PAGE_URL;
++          $('carrierPage').src = INVALID_DEVICE_INFO_PAGE_URL;
+           $('statusHeader').textContent =
+               loadTimeData.getString('invalid_device_info_header');
+           this.stopSpinner_();
+           break;
+         case CarrierPageType.NOT_SET:
+-          $('carrierPage').contentWindow.location.href = 'about:blank';
++          $('carrierPage').src = 'about:blank';
+           $('statusHeader').textContent = '';
+           this.stopSpinner_();
+           break;
+@@ -110,17 +119,22 @@
+       this.carrierPageType_ = type;
+     },
+ 
++    /**
++     * Initilizes payment portal webview using payment URL and post data
++     * provided by the cellular service associated with this web UI.
++     * The portal webview is initilized only once, and is expected to load only
++     * data and web URLs - it should never load mobile setup extension URLs.
++     * @param {!Object} deviceInfo Information about the cellular service for
++     *     which the portal should be loaded (the relevant information is the
++     *     network's payment URL and POST request data).
++     * @private
++     */
+     setPortalFrameIfNeeded_: function(deviceInfo) {
+       // The portal should be set only once.
+       if (this.portalFrameSet_)
+         return;
+ 
+-      var postData = '';
+-      if (deviceInfo.post_data && deviceInfo.post_data.length)
+-        postData = '&post_data=' + encodeURIComponent(deviceInfo.post_data);
+-
+-      $('portalFrame').contentWindow.location.href = REDIRECT_POST_PAGE_URL +
+-          postData + '&formUrl=' + encodeURIComponent(deviceInfo.payment_url);
++      mobile.util.postDeviceDataToWebview($('portalFrame'), deviceInfo);
+ 
+       this.portalFrameSet_ = true;
+     },
+diff --git a/chrome/browser/resources/chromeos/mobile_setup_util.js b/chrome/browser/resources/chromeos/mobile_setup_util.js
+new file mode 100644
+index 0000000..502b82b
+--- /dev/null
++++ b/chrome/browser/resources/chromeos/mobile_setup_util.js
+@@ -0,0 +1,109 @@
++// Copyright 2017 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++/**
++ * @fileoverview  Provides utility methods used by chrome://mobilesetup UI -
++ * both mobile_setup.html and mobile_setup_portal.html
++ */
++cr.define('mobile.util', function() {
++
++  /**
++   * The script executed in the webview that is expected to be initialized
++   * using POST request. The script parses the POST data (which is provided as
++   * list of name value pairs) and adds appropriate input elements to the form,
++   * sets the form action to the paymentUrl, and submits the form.
++   *
++   * The script should be run with the following arguments:
++   * <code>form</code> - Form element that should be initialized and submitted.
++   * <code>paymentUrl</code> - The target form action URL.
++   * <code>postData</code> - The post request data submitted through the form.
++   *    Example format of post data:
++   *        <code>name1=value1&name2=value2&name3</code>
++   *    Note that for <code>name3</code>, the value will be set to
++   *    <code>true</code>.
++   * @const {string}
++   */
++  var WEBVIEW_REDIRECT_SCRIPT = '(function(form, paymentUrl, postData) {' +
++      'function addInputElement(form, name, value) {' +
++      '  var input = document.createElement(\'input\');' +
++      '  input.type = \'hidden\';' +
++      '  input.name = name;' +
++      '  input.value = value;' +
++      '  form.appendChild(input);' +
++      '}' +
++      'function initFormFromPostData(form, postData) {' +
++      '  if (!postData) return;' +
++      '  var pairs = postData.split(\'&\');' +
++      '  pairs.forEach(pairStr => {' +
++      '    var pair = pairStr.split(\'=\');' +
++      '    if (pair.length == 2)' +
++      '      addInputElement(form, pair[0], pair[1]);' +
++      '    else if (pair.length == 1)' +
++      '      addInputElement(form, pair[0], true);' +
++      '  });' +
++      '}' +
++      'form.action = unescape(paymentUrl);' +
++      'form.method = \'POST\';' +
++      'initFormFromPostData(form, unescape(postData));' +
++      'form.submit();' +
++      '})';
++
++  /**
++   * @const {string} The ID used for the form element in the initial webiew
++   *     HTML.
++   */
++  var WEBVIEW_REDIRECT_FORM_ID = 'redirectForm';
++
++  /**
++   * @const {string} The initial webview HTML - this will be loaded into the
++   *     webview using data URL before executing
++   *     <code>WEBVIEW_REDIRECT_SCRIPT</code>.
++   */
++  var WEBVIEW_REDIRECT_HTML = '<html><body>' +
++      '<form id="' + WEBVIEW_REDIRECT_FORM_ID + '"></form>' +
++      '</body></html>';
++
++  /**
++   * Handles load commit event in the webview.
++   * It runs <code>WEBVIEW_REDIRECT_SCRIPT</code> in the webview.
++   * @param {WebView} webview The targer webview element.
++   * @param {!Object} deviceInfo An object containing POST request information.
++   * @param {string} webviewSrc The intended webview URL - commit events that
++   *     do not match this URL will be ignored.
++   * @param {!Object} commitEvent The loadcommit event.
++   */
++  function initializeWebviewRedirectForm(
++      webview, deviceInfo, webviewSrc, commitEvent) {
++    if (!commitEvent.isTopLevel || commitEvent.url != webviewSrc)
++      return;
++
++    webview.executeScript({
++      code: WEBVIEW_REDIRECT_SCRIPT + '(' +
++          'document.getElementById(\'' + WEBVIEW_REDIRECT_FORM_ID + '\'),' +
++          ' \'' + escape(deviceInfo.payment_url) + '\',' +
++          ' \'' + escape(deviceInfo.post_data || '') + '\');'
++    });
++  }
++
++  /**
++   * Initialized webview using a POST request described in
++   * <code>deviceInfo</code> - the device info will contain the POST request
++   * target URL (as <code>payment_url</code> property) and post data string
++   * (as <code>post_data</code> property).
++   * @param {WebView} webview The webview to be initialized.
++   * @param {!Object} deviceInfo The object containing POST request
++   *     information.
++   */
++  function postDeviceDataToWebview(webview, deviceInfo) {
++    var webviewSrc = 'data:text/html;charset=utf-8,' +
++        encodeURIComponent(WEBVIEW_REDIRECT_HTML);
++    webview.addEventListener(
++        'loadcommit',
++        initializeWebviewRedirectForm.bind(
++            this, webview, deviceInfo, webviewSrc));
++    webview.src = webviewSrc;
++  }
++
++  return {postDeviceDataToWebview: postDeviceDataToWebview};
++});
+diff --git a/chrome/common/extensions/api/_api_features.json b/chrome/common/extensions/api/_api_features.json
+index f2f35c7..75c4bf1 100644
+--- a/chrome/common/extensions/api/_api_features.json
++++ b/chrome/common/extensions/api/_api_features.json
+@@ -245,6 +245,7 @@
+     "matches": [
+       "chrome://chrome-signin/*",
+       "chrome://media-router/*",
++      "chrome://mobilesetup/*",
+       "chrome://oobe/*"
+     ]
+   }],
+diff --git a/extensions/browser/url_request_util.cc b/extensions/browser/url_request_util.cc
+index 5dd47c8..13a79cb 100644
+--- a/extensions/browser/url_request_util.cc
++++ b/extensions/browser/url_request_util.cc
+@@ -169,6 +169,24 @@
+       return true;
+     }
+ 
++    // Allow mobile setup web UI (chrome://mobilesetup) to embed resources from
++    // the component mobile activation extension in a webview. This is needed
++    // because the activation web UI relies on the activation extension to
++    // provide parts of its UI, and to redirect POST requests to the network
++    // payment URL during mobile device initialization.
++    //
++    // TODO(http://crbug.com/778021): Fix mobile activation UI not to require
++    // this workaround.
++    bool is_mobile_activation_extension =
++        extension && extension->id() == "iadeocfgjdjdmpenejdbfeaocpbikmab";
++    if (is_mobile_activation_extension &&
++        (resource_path == "/activation.html" ||
++         resource_path == "/portal_offline.html" ||
++         resource_path == "/invalid_device_info.html")) {
++      *allowed = true;
++      return true;
++    }
++
+     // An extension's resources should only be accessible to WebViews owned by
+     // that extension.
+     if (owner_extension != extension) {
+diff --git a/extensions/common/api/_api_features.json b/extensions/common/api/_api_features.json
+index 60a326b..605499b 100644
+--- a/extensions/common/api/_api_features.json
++++ b/extensions/common/api/_api_features.json
+@@ -200,6 +200,7 @@
+         "chrome://extensions/*",
+         "chrome://chrome-signin/*",
+         "chrome://media-router/*",
++        "chrome://mobilesetup/*",
+         "chrome://oobe/*"
+       ]
+     }
+@@ -556,6 +557,7 @@
+     "matches": [
+       "chrome://chrome-signin/*",
+       "chrome://media-router/*",
++      "chrome://mobilesetup/*",
+       "chrome://oobe/*"
+     ]
+   }],
+@@ -570,6 +572,7 @@
+     "matches": [
+       "chrome://chrome-signin/*",
+       "chrome://media-router/*",
++      "chrome://mobilesetup/*",
+       "chrome://oobe/*"
+     ]
+   }],
+@@ -582,6 +585,7 @@
+     "matches": [
+       "chrome://chrome-signin/*",
+       "chrome://media-router/*",
++      "chrome://mobilesetup/*",
+       "chrome://oobe/*"
+     ]
+   }]

@@ -1,0 +1,429 @@
+--- a/remoting/protocol/webrtc_transport.cc
++++ b/remoting/protocol/webrtc_transport.cc
+@@ -78,7 +78,7 @@
+   // underlying bug is fixed to handle high load at high bitrate.
+   if (sdp_message->has_video()) {
+     const char* kParameters =
+-        "x-google-min-bitrate=0; x-google-max-bitrate=20000";
++        "x-google-min-bitrate=1000; x-google-max-bitrate=20000";
+     bool param_added = sdp_message->AddCodecParameter("VP8", kParameters);
+     param_added |= sdp_message->AddCodecParameter("VP9", kParameters);
+     param_added |= sdp_message->AddCodecParameter("H264", kParameters);
+--- a/chrome/android/java/src/org/chromium/chrome/browser/util/FeatureUtilities.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/util/FeatureUtilities.java
+@@ -203,6 +203,10 @@
+                 ChromeFeatureList.isEnabled(ChromeFeatureList.DONT_PREFETCH_LIBRARIES));
+     }
+ 
++    public static void notifyChromeHomeStatusChanged(boolean isChromeHomeEnabled) {
++        nativeNotifyChromeHomeStatusChanged(isChromeHomeEnabled);
++    }
++
+     /**
+      * Finalize any static settings that will change when the browser restarts.
+      */
+@@ -210,6 +214,7 @@
+         if (sChromeHomePendingState != null) {
+             sChromeHomeEnabled = sChromeHomePendingState;
+             sChromeHomePendingState = null;
++            notifyChromeHomeStatusChanged(sChromeHomeEnabled);
+         }
+     }
+ 
+@@ -387,4 +392,5 @@
+ 
+     private static native void nativeSetCustomTabVisible(boolean visible);
+     private static native void nativeSetIsInMultiWindowMode(boolean isInMultiWindowMode);
++    private static native void nativeNotifyChromeHomeStatusChanged(boolean isChromeHomeEnabled);
+ }
+diff --git a/chrome/browser/android/feature_utilities.cc b/chrome/browser/android/feature_utilities.cc
+index 03a3b4e..48497b9 100644
+--- a/chrome/browser/android/feature_utilities.cc
++++ b/chrome/browser/android/feature_utilities.cc
+@@ -6,6 +6,9 @@
+ 
+ #include "jni/FeatureUtilities_jni.h"
+ 
++#include "chrome/browser/ntp_snippets/content_suggestions_service_factory.h"
++#include "chrome/browser/profiles/profile_manager.h"
++#include "components/ntp_snippets/content_suggestions_service.h"
+ #include "components/ukm/ukm_source.h"
+ 
+ using base::android::JavaParamRef;
+@@ -47,3 +50,15 @@
+                                    jboolean j_is_in_multi_window_mode) {
+   is_in_multi_window_mode = j_is_in_multi_window_mode;
+ }
++
++static void NotifyChromeHomeStatusChanged(JNIEnv* env,
++                                          const JavaParamRef<jclass>& clazz,
++                                          jboolean j_is_chrome_home_enabled) {
++  ntp_snippets::ContentSuggestionsService* content_suggestions_service =
++      ContentSuggestionsServiceFactory::GetForProfileIfExists(
++          ProfileManager::GetLastUsedProfile());
++  if (content_suggestions_service) {
++    content_suggestions_service->OnChromeHomeStatusChanged(
++        j_is_chrome_home_enabled);
++  }
++}
+diff --git a/components/ntp_snippets/content_suggestions_service.cc b/components/ntp_snippets/content_suggestions_service.cc
+index 7e1b5ea..fbc6a2c 100644
+--- a/components/ntp_snippets/content_suggestions_service.cc
++++ b/components/ntp_snippets/content_suggestions_service.cc
+@@ -13,7 +13,9 @@
+ #include "base/location.h"
+ #include "base/memory/ptr_util.h"
+ #include "base/metrics/histogram_macros.h"
++#include "base/stl_util.h"
+ #include "base/strings/string_number_conversions.h"
++#include "base/strings/stringprintf.h"
+ #include "base/threading/thread_task_runner_handle.h"
+ #include "base/time/default_clock.h"
+ #include "base/values.h"
+@@ -441,6 +443,22 @@
+   }
+ }
+ 
++void ContentSuggestionsService::OnChromeHomeStatusChanged(
++    bool is_chrome_home_enabled) {
++  debug_logger_->Log(
++      FROM_HERE, base::StringPrintf("Chrome Home enabled: %s",
++                                    is_chrome_home_enabled ? "true" : "false"));
++  if (is_chrome_home_enabled) {
++    // TODO(vitaliii): Make this code more general and do not hardcode specific
++    // categories.
++    DestroyCategoryAndItsProvider(
++        Category::FromKnownCategory(KnownCategories::BOOKMARKS));
++    DestroyCategoryAndItsProvider(
++        Category::FromKnownCategory(KnownCategories::DOWNLOADS));
++  }
++  // TODO(vitaliii): Recreate providers when Chrome Home is turned off.
++}
++
+ bool ContentSuggestionsService::AreRemoteSuggestionsEnabled() const {
+   return remote_suggestions_provider_ &&
+          !remote_suggestions_provider_->IsDisabled();
+@@ -709,4 +727,37 @@
+   pref_service_->Set(prefs::kDismissedCategories, list);
+ }
+ 
++void ContentSuggestionsService::DestroyCategoryAndItsProvider(
++    Category category) {
++  // Destroying articles category is more complex and not implemented.
++  DCHECK_NE(category, Category::FromKnownCategory(KnownCategories::ARTICLES));
++
++  if (providers_by_category_.count(category) != 1) {
++    return;
++  }
++
++  {  // Destroy the provider and delete its mentions.
++    ContentSuggestionsProvider* raw_provider = providers_by_category_[category];
++    base::EraseIf(
++        providers_,
++        [&raw_provider](
++            const std::unique_ptr<ContentSuggestionsProvider>& provider) {
++          return provider.get() == raw_provider;
++        });
++    providers_by_category_.erase(category);
++
++    if (dismissed_providers_by_category_.count(category) == 1) {
++      dismissed_providers_by_category_[category] = nullptr;
++    }
++  }
++
++  suggestions_by_category_.erase(category);
++
++  auto it = std::find(categories_.begin(), categories_.end(), category);
++  categories_.erase(it);
++
++  // Notify observers that the category is gone.
++  NotifyCategoryStatusChanged(category);
++}
++
+ }  // namespace ntp_snippets
+diff --git a/components/ntp_snippets/content_suggestions_service.h b/components/ntp_snippets/content_suggestions_service.h
+index e95d041..5582a25 100644
+--- a/components/ntp_snippets/content_suggestions_service.h
++++ b/components/ntp_snippets/content_suggestions_service.h
+@@ -186,6 +186,9 @@
+   // meantime).
+   void ReloadSuggestions();
+ 
++  // Must be called when Chrome Home is turned on or off.
++  void OnChromeHomeStatusChanged(bool is_chrome_home_enabled);
++
+   // Observer accessors.
+   void AddObserver(Observer* observer);
+   void RemoveObserver(Observer* observer);
+@@ -325,6 +328,11 @@
+   void RestoreDismissedCategoriesFromPrefs();
+   void StoreDismissedCategoriesToPrefs();
+ 
++  // Not implemented for articles. For all other categories, destroys its
++  // provider, deletes all mentions (except from dismissed list) and notifies
++  // observers that the category is disabled.
++  void DestroyCategoryAndItsProvider(Category category);
++
+   // Get the domain of the suggestion suitable for fetching the favicon.
+   GURL GetFaviconDomain(const ContentSuggestion::ID& suggestion_id);
+ 
+diff --git a/components/ntp_snippets/content_suggestions_service_unittest.cc b/components/ntp_snippets/content_suggestions_service_unittest.cc
+index 8f26cfb..ea86f39 100644
+--- a/components/ntp_snippets/content_suggestions_service_unittest.cc
++++ b/components/ntp_snippets/content_suggestions_service_unittest.cc
+@@ -14,6 +14,7 @@
+ #include "base/message_loop/message_loop.h"
+ #include "base/run_loop.h"
+ #include "base/strings/string_number_conversions.h"
++#include "base/test/mock_callback.h"
+ #include "base/time/default_clock.h"
+ #include "components/ntp_snippets/category_info.h"
+ #include "components/ntp_snippets/category_rankers/constant_category_ranker.h"
+@@ -39,6 +40,7 @@
+ using testing::Mock;
+ using testing::Property;
+ using testing::Return;
++using testing::SizeIs;
+ using testing::StrictMock;
+ using testing::UnorderedElementsAre;
+ 
+@@ -818,4 +820,130 @@
+   service()->DismissCategory(category);
+ }
+ 
++TEST_F(ContentSuggestionsServiceTest,
++       ShouldDestroyBookmarksProviderWhenChromeHomeIsEnabled) {
++  // Create and register the provider.
++  Category bookmarks_category =
++      Category::FromKnownCategory(KnownCategories::BOOKMARKS);
++  MockContentSuggestionsProvider* bookmarks_provider =
++      MakeRegisteredMockProvider(bookmarks_category);
++  bookmarks_provider->FireSuggestionsChanged(
++      bookmarks_category, CreateSuggestions(bookmarks_category, {1}));
++  bookmarks_provider->FireCategoryStatusChangedWithCurrentStatus(
++      bookmarks_category);
++  ASSERT_THAT(service()->GetCategories(),
++              UnorderedElementsAre(bookmarks_category));
++  ASSERT_THAT(service()->GetCategoryStatus(bookmarks_category),
++              Eq(CategoryStatus::AVAILABLE));
++  ASSERT_THAT(service()->GetSuggestionsForCategory(bookmarks_category),
++              SizeIs(1));
++
++  // Set destructor callback to expect the destruction.
++  base::MockCallback<MockContentSuggestionsProvider::DestructorCallback>
++      mock_destructor_callback;
++  bookmarks_provider->SetDestructorCallback(mock_destructor_callback.Get());
++
++  MockServiceObserver observer;
++  service()->AddObserver(&observer);
++
++  // The provider must be destructed and the category status must change.
++  EXPECT_CALL(mock_destructor_callback, Run());
++  EXPECT_CALL(observer, OnCategoryStatusChanged(bookmarks_category,
++                                                CategoryStatus::NOT_PROVIDED));
++  service()->OnChromeHomeStatusChanged(/*is_chrome_home_enabled=*/true);
++
++  EXPECT_THAT(service()->GetCategories(), IsEmpty());
++  EXPECT_THAT(service()->GetCategoryStatus(bookmarks_category),
++              Eq(CategoryStatus::NOT_PROVIDED));
++  EXPECT_THAT(service()->GetSuggestionsForCategory(bookmarks_category),
++              IsEmpty());
++
++  service()->RemoveObserver(&observer);
++}
++
++TEST_F(ContentSuggestionsServiceTest,
++       ShouldDestroyDownloadsProviderWhenChromeHomeIsEnabled) {
++  // Create and register the provider.
++  Category downloads_category =
++      Category::FromKnownCategory(KnownCategories::DOWNLOADS);
++  MockContentSuggestionsProvider* downloads_provider =
++      MakeRegisteredMockProvider(downloads_category);
++  downloads_provider->FireSuggestionsChanged(
++      downloads_category, CreateSuggestions(downloads_category, {1}));
++  downloads_provider->FireCategoryStatusChangedWithCurrentStatus(
++      downloads_category);
++  ASSERT_THAT(service()->GetCategories(),
++              UnorderedElementsAre(downloads_category));
++  ASSERT_THAT(service()->GetCategoryStatus(downloads_category),
++              Eq(CategoryStatus::AVAILABLE));
++  ASSERT_THAT(service()->GetSuggestionsForCategory(downloads_category),
++              SizeIs(1));
++
++  // Set destructor callback to expect the destruction.
++  base::MockCallback<MockContentSuggestionsProvider::DestructorCallback>
++      mock_destructor_callback;
++  downloads_provider->SetDestructorCallback(mock_destructor_callback.Get());
++
++  MockServiceObserver observer;
++  service()->AddObserver(&observer);
++
++  // The provider must be destructed and the category status must change.
++  EXPECT_CALL(mock_destructor_callback, Run());
++  EXPECT_CALL(observer, OnCategoryStatusChanged(downloads_category,
++                                                CategoryStatus::NOT_PROVIDED));
++  service()->OnChromeHomeStatusChanged(/*is_chrome_home_enabled=*/true);
++
++  EXPECT_THAT(service()->GetCategories(), IsEmpty());
++  EXPECT_THAT(service()->GetCategoryStatus(downloads_category),
++              Eq(CategoryStatus::NOT_PROVIDED));
++  EXPECT_THAT(service()->GetSuggestionsForCategory(downloads_category),
++              IsEmpty());
++
++  service()->RemoveObserver(&observer);
++}
++
++TEST_F(ContentSuggestionsServiceTest,
++       ShouldNotDestroyArticlesProviderWhenChromeHomeIsEnabled) {
++  // Create and register the provider.
++  Category articles_category =
++      Category::FromKnownCategory(KnownCategories::ARTICLES);
++  MockContentSuggestionsProvider* articles_provider =
++      MakeRegisteredMockProvider(articles_category);
++  articles_provider->FireSuggestionsChanged(
++      articles_category, CreateSuggestions(articles_category, {1}));
++  articles_provider->FireCategoryStatusChangedWithCurrentStatus(
++      articles_category);
++  ASSERT_THAT(service()->GetCategories(),
++              UnorderedElementsAre(articles_category));
++  ASSERT_THAT(service()->GetCategoryStatus(articles_category),
++              Eq(CategoryStatus::AVAILABLE));
++  ASSERT_THAT(service()->GetSuggestionsForCategory(articles_category),
++              SizeIs(1));
++
++  // Set destructor callback to ensure no destruction.
++  base::MockCallback<MockContentSuggestionsProvider::DestructorCallback>
++      mock_destructor_callback;
++  articles_provider->SetDestructorCallback(mock_destructor_callback.Get());
++
++  MockServiceObserver observer;
++  service()->AddObserver(&observer);
++
++  // The provider must not be destructed and the category status must not
++  // change, because Articles are enabled in Chrome Home.
++  EXPECT_CALL(mock_destructor_callback, Run()).Times(0);
++  EXPECT_CALL(observer, OnCategoryStatusChanged(articles_category, _)).Times(0);
++  service()->OnChromeHomeStatusChanged(/*is_chrome_home_enabled=*/true);
++
++  EXPECT_THAT(service()->GetCategories(),
++              UnorderedElementsAre(articles_category));
++  EXPECT_THAT(service()->GetCategoryStatus(articles_category),
++              Eq(CategoryStatus::AVAILABLE));
++  EXPECT_THAT(service()->GetSuggestionsForCategory(articles_category),
++              SizeIs(1));
++
++  articles_provider->SetDestructorCallback(
++      MockContentSuggestionsProvider::DestructorCallback());
++  service()->RemoveObserver(&observer);
++}
++
+ }  // namespace ntp_snippets
+diff --git a/components/ntp_snippets/mock_content_suggestions_provider.cc b/components/ntp_snippets/mock_content_suggestions_provider.cc
+index 8bd07bf..cf447b3 100644
+--- a/components/ntp_snippets/mock_content_suggestions_provider.cc
++++ b/components/ntp_snippets/mock_content_suggestions_provider.cc
+@@ -18,7 +18,11 @@
+   SetProvidedCategories(provided_categories);
+ }
+ 
+-MockContentSuggestionsProvider::~MockContentSuggestionsProvider() {}
++MockContentSuggestionsProvider::~MockContentSuggestionsProvider() {
++  if (destructor_callback_) {
++    std::move(destructor_callback_).Run();
++  }
++}
+ 
+ void MockContentSuggestionsProvider::SetProvidedCategories(
+     const std::vector<Category>& provided_categories) {
+@@ -43,6 +47,11 @@
+                       base::ASCIIToUTF16("No suggestions message"));
+ }
+ 
++void MockContentSuggestionsProvider::SetDestructorCallback(
++    DestructorCallback callback) {
++  destructor_callback_ = std::move(callback);
++}
++
+ void MockContentSuggestionsProvider::Fetch(const Category& category,
+                                            const std::set<std::string>& set,
+                                            FetchDoneCallback callback) {
+diff --git a/components/ntp_snippets/mock_content_suggestions_provider.h b/components/ntp_snippets/mock_content_suggestions_provider.h
+index 57632e1..a45f6ca 100644
+--- a/components/ntp_snippets/mock_content_suggestions_provider.h
++++ b/components/ntp_snippets/mock_content_suggestions_provider.h
+@@ -10,6 +10,7 @@
+ #include <string>
+ #include <vector>
+ 
++#include "base/callback.h"
+ #include "base/macros.h"
+ #include "components/ntp_snippets/content_suggestions_provider.h"
+ #include "testing/gmock/include/gmock/gmock.h"
+@@ -19,6 +20,8 @@
+ // TODO(treib): This is a weird combination of a mock and a fake. Fix this.
+ class MockContentSuggestionsProvider : public ContentSuggestionsProvider {
+  public:
++  using DestructorCallback = base::OnceCallback<void()>;
++
+   MockContentSuggestionsProvider(
+       Observer* observer,
+       const std::vector<Category>& provided_categories);
+@@ -43,6 +46,9 @@
+   void FireCategoryStatusChangedWithCurrentStatus(Category category);
+   void FireSuggestionInvalidated(const ContentSuggestion::ID& suggestion_id);
+ 
++  // Set a callback to be called in the destructor. Used to "mock" destruction.
++  void SetDestructorCallback(DestructorCallback callback);
++
+   MOCK_METHOD3(ClearHistory,
+                void(base::Time begin,
+                     base::Time end,
+@@ -76,6 +82,10 @@
+  private:
+   std::vector<Category> provided_categories_;
+   std::map<int, CategoryStatus> statuses_;
++
++  DestructorCallback destructor_callback_;
++
++  DISALLOW_COPY_AND_ASSIGN(MockContentSuggestionsProvider);
+ };
+ 
+ }  // namespace ntp_snippets
+--- a/android_webview/javatests/src/org/chromium/android_webview/test/AwSettingsTest.java
++++ b/android_webview/javatests/src/org/chromium/android_webview/test/AwSettingsTest.java
+@@ -1186,9 +1186,13 @@
+                     + (mOpenTwice ? "newWindow = window.open('about:blank');" : "")
+                     + "        if (newWindow) {"
+                     + "            if (newWindow === window) {"
+-                    + "                newWindow.document.write("
+-                    + "                    '<html><head><title>" + POPUP_ENABLED
++                    + "                if (newWindow.opener != null) {"
++                    + "                    newWindow.document.write("
++                    + "                        '<html><head><title>" + POPUP_ENABLED
+                     + "</title></head></html>');"
++                    + "                } else {"
++                    + "                    newWindow.document.write('failed to set opener');"
++                    + "                }"
+                     + "            } else {"
+                     + "                document.title = '" + POPUP_ENABLED + "';"
+                     + "            }"
+diff --git a/third_party/WebKit/Source/core/page/CreateWindow.cpp b/third_party/WebKit/Source/core/page/CreateWindow.cpp
+index 7bc008b..90d5cd7 100644
+--- a/third_party/WebKit/Source/core/page/CreateWindow.cpp
++++ b/third_party/WebKit/Source/core/page/CreateWindow.cpp
+@@ -300,8 +300,12 @@
+   if (!page)
+     return nullptr;
+ 
+-  if (page == old_page)
+-    return &opener_frame.Tree().Top();
++  if (page == old_page) {
++    Frame* frame = &opener_frame.Tree().Top();
++    if (request.GetShouldSetOpener() == kMaybeSetOpener)
++      frame->Client()->SetOpener(&opener_frame);
++    return frame;
++  }
+ 
+   DCHECK(page->MainFrame());
+   LocalFrame& frame = *ToLocalFrame(page->MainFrame());
+

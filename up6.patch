@@ -1,0 +1,717 @@
+diff --git a/third_party/WebKit/Source/core/loader/DocumentLoader.cpp b/third_party/WebKit/Source/core/loader/DocumentLoader.cpp
+index de684ac..e58332a 100644
+--- a/third_party/WebKit/Source/core/loader/DocumentLoader.cpp
++++ b/third_party/WebKit/Source/core/loader/DocumentLoader.cpp
+@@ -997,11 +997,12 @@
+     const LocalFrame& frame,
+     SecurityOrigin* previous_security_origin,
+     const Document& new_document) {
+-  if (!previous_security_origin || !frame.IsMainFrame() ||
+-      frame.Loader().Opener() ||
+-      (frame.GetPage() && frame.GetPage()->OpenedByDOM())) {
++  if (!previous_security_origin)
+     return false;
+-  }
++  if (!frame.IsMainFrame())
++    return false;
++  if (frame.Loader().Opener())
++    return false;
+ 
+   return !new_document.GetSecurityOrigin()->IsSameSchemeHostPort(
+       previous_security_origin);
+@@ -1093,7 +1094,12 @@
+   }
+ 
+   if (ShouldClearWindowName(*frame_, previous_security_origin, *document)) {
+-    frame_->Tree().SetName(g_null_atom);
++    // TODO(andypaicu): experimentalSetNullName will just record the fact
++    // that the name would be nulled and if the name is accessed after we will
++    // fire a UseCounter. If we decide to move forward with this change, we'd
++    // actually clean the name here.
++    // frame_->tree().setName(g_null_atom);
++    frame_->Tree().ExperimentalSetNulledName();
+   }
+ 
+   if (!overriding_url.IsEmpty())
+diff --git a/third_party/WebKit/Source/core/page/FrameTree.cpp b/third_party/WebKit/Source/core/page/FrameTree.cpp
+index 148b8b6..95ae447 100644
+--- a/third_party/WebKit/Source/core/page/FrameTree.cpp
++++ b/third_party/WebKit/Source/core/page/FrameTree.cpp
+@@ -50,9 +50,29 @@
+ FrameTree::~FrameTree() {}
+ 
+ const AtomicString& FrameTree::GetName() const {
++  // TODO(andypaicu): remove this once we have gathered the data
++  if (experimental_set_nulled_name_) {
++    const LocalFrame* frame =
++        this_frame_->IsLocalFrame()
++            ? ToLocalFrame(this_frame_)
++            : (Top().IsLocalFrame() ? ToLocalFrame(&Top()) : nullptr);
++    if (frame) {
++      UseCounter::Count(frame,
++                        WebFeature::kCrossOriginMainFrameNulledNameAccessed);
++      if (!name_.IsEmpty()) {
++        UseCounter::Count(
++            frame, WebFeature::kCrossOriginMainFrameNulledNonEmptyNameAccessed);
++      }
++    }
++  }
+   return name_;
+ }
+ 
++// TODO(andypaicu): remove this once we have gathered the data
++void FrameTree::ExperimentalSetNulledName() {
++  experimental_set_nulled_name_ = true;
++}
++
+ void FrameTree::SetName(const AtomicString& name,
+                         ReplicationPolicy replication) {
+   if (replication == kReplicate) {
+@@ -71,6 +91,8 @@
+     }
+   }
+ 
++  // TODO(andypaicu): remove this once we have gathered the data
++  experimental_set_nulled_name_ = false;
+   name_ = name;
+ }
+ 
+diff --git a/third_party/WebKit/Source/core/page/FrameTree.h b/third_party/WebKit/Source/core/page/FrameTree.h
+index 82b5c4e..5916ea1 100644
+--- a/third_party/WebKit/Source/core/page/FrameTree.h
++++ b/third_party/WebKit/Source/core/page/FrameTree.h
+@@ -47,6 +47,9 @@
+   };
+   void SetName(const AtomicString&, ReplicationPolicy = kDoNotReplicate);
+ 
++  // TODO(andypaicu): remove this once we have gathered the data
++  void ExperimentalSetNulledName();
++
+   Frame* Parent() const;
+   Frame& Top() const;
+   Frame* NextSibling() const;
+@@ -71,6 +74,9 @@
+   AtomicString name_;  // The actual frame name (may be empty).
+ 
+   mutable unsigned scoped_child_count_;
++
++  // TODO(andypaicu): remove this once we have gathered the data
++  bool experimental_set_nulled_name_;
+ };
+ 
+ }  // namespace blink
+diff --git a/third_party/WebKit/public/platform/web_feature.mojom b/third_party/WebKit/public/platform/web_feature.mojom
+index 7ae917d..d6b9958 100644
+--- a/third_party/WebKit/public/platform/web_feature.mojom
++++ b/third_party/WebKit/public/platform/web_feature.mojom
+@@ -1443,6 +1443,7 @@
+   kMagnetometerConstructor = 1907,
+   kOrientationSensorPopulateMatrix = 1908,
+   kWindowOpenWithInvalidURL = 1909,
++  kCrossOriginMainFrameNulledNameAccessed = 1910,
+   kMenuItemElementIconAttribute = 1911,
+   kWebkitCSSMatrixSetMatrixValue = 1912,
+   kWebkitCSSMatrixConstructFromString = 1913,
+@@ -1552,6 +1553,7 @@
+   kSmoothScrollJSInterventionActivated = 2020,
+   kBudgetAPIGetCost = 2021,
+   kBudgetAPIGetBudget = 2022,
++  kCrossOriginMainFrameNulledNonEmptyNameAccessed = 2023,
+   kDeprecatedTimingFunctionStepMiddle = 2024,
+   kDocumentDomainSetWithNonDefaultPort = 2025,
+   kDocumentDomainSetWithDefaultPort = 2026,
+@@ -31,6 +31,8 @@
+ 
+         @Override
+         public void onConnected(IBinder api) {
++            if (api == null) return;
++
+             try {
+                 useApi(IWebApkApi.Stub.asInterface(api));
+             } catch (RemoteException e) {
+--- a/chrome/android/java/res/values/dimens.xml
++++ b/chrome/android/java/res/values/dimens.xml
+@@ -532,4 +532,10 @@
+     <!-- Reader Mode dimensions -->
+     <!-- Padding surrounding the message. -->
+     <dimen name="reader_mode_infobar_text_padding">8dp</dimen>
++
++    <!-- Defaults for TabbedModeFirstRunActivity values. -->
++    <item type="dimen" name="dialog_fixed_width_major">100%</item>
++    <item type="dimen" name="dialog_fixed_width_minor">100%</item>
++    <item type="dimen" name="dialog_fixed_height_major">100%</item>
++    <item type="dimen" name="dialog_fixed_height_minor">100%</item>
+ </resources>
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java
+index 08258096..371d11d 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java
+@@ -5,6 +5,8 @@
+ package org.chromium.chrome.browser.firstrun;
+ 
+ import android.content.Context;
++import android.content.res.Resources;
++import android.support.annotation.AnyRes;
+ import android.util.DisplayMetrics;
+ import android.util.TypedValue;
+ import android.view.Gravity;
+@@ -59,6 +61,19 @@
+             fetchConstraints();
+         }
+ 
++        /**
++         * Wrapper around Resources.getValue() that translates Resources.NotFoundException
++         * into false return value. Otherwise the function returns true.
++         */
++        private boolean safeGetResourceValue(@AnyRes int id, TypedValue value) {
++            try {
++                getContext().getResources().getValue(id, value, true);
++                return true;
++            } catch (Resources.NotFoundException e) {
++                return false;
++            }
++        }
++
+         private void fetchConstraints() {
+             // Fetch size constraints. These are copies of corresponding abc_* AppCompat values,
+             // because abc_* values are private, and even though corresponding theme attributes
+@@ -67,14 +82,10 @@
+             // system DialogWhenLarge theme.
+             // Note that we don't care about the return values, because onMeasure() handles null
+             // constraints (and they will be null when the device is not considered "large").
+-            getContext().getResources().getValue(
+-                    R.dimen.dialog_fixed_width_minor, mFixedWidthMinor, true);
+-            getContext().getResources().getValue(
+-                    R.dimen.dialog_fixed_width_major, mFixedWidthMajor, true);
+-            getContext().getResources().getValue(
+-                    R.dimen.dialog_fixed_height_minor, mFixedHeightMinor, true);
+-            getContext().getResources().getValue(
+-                    R.dimen.dialog_fixed_height_major, mFixedHeightMajor, true);
++            safeGetResourceValue(R.dimen.dialog_fixed_width_minor, mFixedWidthMinor);
++            safeGetResourceValue(R.dimen.dialog_fixed_width_major, mFixedWidthMajor);
++            safeGetResourceValue(R.dimen.dialog_fixed_height_minor, mFixedHeightMinor);
++            safeGetResourceValue(R.dimen.dialog_fixed_height_major, mFixedHeightMajor);
+         }
+ 
+         @Override
+--- a/chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
+@@ -2265,7 +2265,7 @@
+     @Override
+     public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
+         super.onMultiWindowModeChanged(isInMultiWindowMode);
+-        if (!FeatureUtilities.isTabModelMergingEnabled()) return;
++        if (!FeatureUtilities.isTabModelMergingEnabled() || !mNativeInitialized) return;
+         if (!isInMultiWindowMode) {
+             // If the activity is currently resumed when multi-window mode is exited, try to merge
+             // tabs from the other activity instance.
+--- a/chrome/browser/ui/cocoa/passwords/pending_password_view_controller.mm
++++ b/chrome/browser/ui/cocoa/passwords/pending_password_view_controller.mm
+@@ -113,22 +113,24 @@
+ 
+   // Buttons go on the bottom row and are right-aligned.
+   // Start with [Save].
+-  CGFloat curX = width - kFramePadding + kRelatedControlHorizontalPadding;
+-  CGFloat curY = kFramePadding;
++  CGFloat curX = 0;
++  CGFloat curY = 0;
+ 
+   for (NSButton* button in buttons) {
+-    curX -= kRelatedControlHorizontalPadding + NSWidth([button frame]);
++    if (button == buttons[0]) {
++      // The right side of the alignment rect is used for the padding.
++      curX = width - kFramePadding -
++             (NSMaxX([button alignmentRectForFrame:[button frame]]) -
++              NSMinX([button frame]));
++      curY = kFramePadding -
++             (NSMinY([button alignmentRectForFrame:[button frame]]) -
++              NSMinY([button frame]));
++    } else {
++      curX -= kRelatedControlHorizontalPadding + NSWidth([button frame]);
++    }
+     [button setFrameOrigin:NSMakePoint(curX, curY)];
+   }
+ 
+-  // Add the third button to the left if it was sent.
+-  if ([buttons count] == 3) {
+-    curX = kFramePadding - (NSWidth([buttons[2] frame]) -
+-                            ([buttons[2] intrinsicContentSize]).width) /
+-                               2;
+-    [buttons[2] setFrameOrigin:NSMakePoint(curX, curY)];
+-  }
+-
+   curX = kFramePadding;
+   curY = NSMaxY([buttons.firstObject frame]) + kUnrelatedControlVerticalPadding;
+ 
+diff --git a/chrome/browser/ui/cocoa/passwords/save_pending_password_view_controller.mm b/chrome/browser/ui/cocoa/passwords/save_pending_password_view_controller.mm
+index 91913c9..8ac97d6 100644
+--- a/chrome/browser/ui/cocoa/passwords/save_pending_password_view_controller.mm
++++ b/chrome/browser/ui/cocoa/passwords/save_pending_password_view_controller.mm
+@@ -216,10 +216,10 @@
+         base::UTF8ToUTF16(form.federation_origin.host()));
+     passwordStaticField_.reset([Label(text) retain]);
+   }
+-  NSView* textField = passwordStaticField_ ? passwordStaticField_.get()
+-                                           : passwordSelectionField_.get();
+-  DCHECK(textField);
+-  [container addSubview:textField];
++  NSView* passwordField = passwordStaticField_ ? passwordStaticField_.get()
++                                               : passwordSelectionField_.get();
++  DCHECK(passwordField);
++  [container addSubview:passwordField];
+ 
+   NSTextField* usernameText =
+       Label(l10n_util::GetStringUTF16(IDS_PASSWORD_MANAGER_USERNAME_LABEL));
+@@ -235,8 +235,8 @@
+   CGFloat firstColumnSize =
+       std::max(NSWidth([usernameText frame]), NSWidth([passwordText_ frame]));
+   // Bottow row.
+-  CGFloat rowHeight =
+-      std::max(NSHeight([textField frame]), NSHeight([passwordText_ frame]));
++  CGFloat rowHeight = std::max(NSHeight([passwordField frame]),
++                               NSHeight([passwordText_ frame]));
+   CGFloat curY = (rowHeight - NSHeight([passwordText_ frame])) / 2;
+   [passwordText_ setFrameOrigin:NSMakePoint(firstColumnSize -
+                                                 NSWidth([passwordText_ frame]),
+@@ -247,10 +247,10 @@
+     curY = (rowHeight - NSHeight([passwordSelectionField_ frame])) / 2;
+   } else {
+     // Password field is top-aligned with the label because it's not editable.
+-    curY = NSMaxY([passwordText_ frame]) - NSHeight([textField frame]);
++    curY = NSMaxY([passwordText_ frame]) - NSHeight([passwordField frame]);
+   }
+-  [textField setFrameOrigin:NSMakePoint(curX, curY)];
+-  CGFloat remainingWidth = kDesiredRowWidth - NSMinX([textField frame]);
++  [passwordField setFrameOrigin:NSMakePoint(curX, curY)];
++  CGFloat remainingWidth = kDesiredRowWidth - NSMinX([passwordField frame]);
+   if (passwordViewButton_) {
+     // The eye icon should be right-aligned.
+     curX = kDesiredRowWidth - NSWidth([passwordViewButton_ frame]);
+@@ -259,8 +259,8 @@
+     remainingWidth -=
+         (NSWidth([passwordViewButton_ frame]) + kItemLabelSpacing);
+   }
+-  [textField
+-      setFrameSize:NSMakeSize(remainingWidth, NSHeight([textField frame]))];
++  [passwordField
++      setFrameSize:NSMakeSize(remainingWidth, NSHeight([passwordField frame]))];
+   // Next row.
+   CGFloat rowY = rowHeight + kRelatedControlVerticalSpacing;
+   rowHeight = std::max(NSHeight([usernameField_ frame]),
+@@ -268,7 +268,10 @@
+   curX = firstColumnSize - NSWidth([usernameText frame]);
+   curY = (rowHeight - NSHeight([usernameText frame])) / 2 + rowY;
+   [usernameText setFrameOrigin:NSMakePoint(curX, curY)];
+-  curX = NSMaxX([usernameText frame]) + kItemLabelSpacing;
++  // The username field is left aligned with the password field.
++  curX = NSMinX([usernameField_
++      frameForAlignmentRect:[passwordField
++                                alignmentRectForFrame:[passwordField frame]]]);
+   curY = (rowHeight - NSHeight([usernameField_ frame])) / 2 + rowY;
+   [usernameField_ setFrameOrigin:NSMakePoint(curX, curY)];
+   remainingWidth = kDesiredRowWidth - NSMinX([usernameField_ frame]);
+--- a/chrome/browser/safe_browsing/safe_browsing_navigation_observer.cc
++++ b/chrome/browser/safe_browsing/safe_browsing_navigation_observer.cc
+@@ -160,12 +160,11 @@
+   // committed navigation.
+   if (navigation_handle->IsRendererInitiated() && current_frame_host &&
+       current_frame_host->GetLastCommittedURL().is_valid()) {
+-    nav_event->source_url =
+-        SafeBrowsingNavigationObserverManager::ClearEmptyRef(
+-            current_frame_host->GetLastCommittedURL());
++    nav_event->source_url = SafeBrowsingNavigationObserverManager::ClearURLRef(
++        current_frame_host->GetLastCommittedURL());
+   }
+   nav_event->original_request_url =
+-      SafeBrowsingNavigationObserverManager::ClearEmptyRef(
++      SafeBrowsingNavigationObserverManager::ClearURLRef(
+           navigation_handle->GetURL());
+ 
+   nav_event->source_tab_id =
+@@ -175,7 +174,7 @@
+     nav_event->source_main_frame_url = nav_event->source_url;
+   } else {
+     nav_event->source_main_frame_url =
+-        SafeBrowsingNavigationObserverManager::ClearEmptyRef(
++        SafeBrowsingNavigationObserverManager::ClearURLRef(
+             navigation_handle->GetWebContents()->GetLastCommittedURL());
+   }
+   navigation_handle_map_[navigation_handle] = std::move(nav_event);
+@@ -190,7 +189,7 @@
+   }
+   NavigationEvent* nav_event = navigation_handle_map_[navigation_handle].get();
+   nav_event->server_redirect_urls.push_back(
+-      SafeBrowsingNavigationObserverManager::ClearEmptyRef(
++      SafeBrowsingNavigationObserverManager::ClearURLRef(
+           navigation_handle->GetURL()));
+   nav_event->last_updated = base::Time::Now();
+ }
+diff --git a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_browsertest.cc b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_browsertest.cc
+index 5342323..876a2a3 100644
+--- a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_browsertest.cc
++++ b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_browsertest.cc
+@@ -75,6 +75,9 @@
+ const char kLandingReferrerURL[] =
+     "/safe_browsing/download_protection/navigation_observer/"
+     "landing_referrer.html";
++const char kLandingReferrerURLWithQuery[] =
++    "/safe_browsing/download_protection/navigation_observer/"
++    "landing_referrer.html?bar=foo";
+ const char kPageBeforeLandingReferrerURL[] =
+     "/safe_browsing/download_protection/navigation_observer/"
+     "page_before_landing_referrer.html";
+@@ -385,6 +388,14 @@
+     }
+   }
+ 
++  void IdentifyReferrerChainForWebContents(content::WebContents* web_contents,
++                                           ReferrerChain* referrer_chain) {
++    observer_manager_->IdentifyReferrerChainByWebContents(
++        web_contents,
++        2,  // kDownloadAttributionUserGestureLimit
++        referrer_chain);
++  }
++
+   // Identify referrer chain of a PPAPI download and populate |referrer_chain|.
+   void IdentifyReferrerChainForPPAPIDownload(
+       const GURL& initiating_frame_url,
+@@ -2024,6 +2035,56 @@
+                            referrer_chain.Get(0));
+ }
+ 
++// Verify referrer chain when there are URL fragments.
++IN_PROC_BROWSER_TEST_F(SBNavigationObserverBrowserTest,
++                       DownloadAttributionWithURLFragment) {
++  GURL initial_url = embedded_test_server()->GetURL(kSingleFrameTestURL);
++  // Clicks on link and navigates to ".../page_before_landing_referrer.html".
++  ClickTestLink("attribution_should_ignore_url_fragments", 1, initial_url);
++  GURL expected_page_before_landing_referrer_url =
++      embedded_test_server()->GetURL(kPageBeforeLandingReferrerURL);
++  // Clicks on link and navigates to ".../landing_referrer.html?bar=foo#baz".
++  ClickTestLink("link_to_landing_referrer_with_query_and_fragment", 1,
++                expected_page_before_landing_referrer_url);
++  GURL expected_landing_referrer_url_with_query =
++      embedded_test_server()->GetURL(kLandingReferrerURLWithQuery);
++  // Clicks on link and navigates to ".../landing.html#".
++  ClickTestLink("link_to_landing_with_empty_fragment", 1,
++                expected_landing_referrer_url_with_query);
++  GURL expected_landing_url = embedded_test_server()->GetURL(kLandingURL);
++
++  std::string test_server_ip(embedded_test_server()->host_port_pair().host());
++  auto* nav_list = navigation_event_list();
++  ASSERT_EQ(4U, nav_list->Size());
++
++  ReferrerChain referrer_chain;
++  SimulateUserGesture();
++  IdentifyReferrerChainForWebContents(
++      browser()->tab_strip_model()->GetActiveWebContents(), &referrer_chain);
++  ASSERT_EQ(2, referrer_chain.size());
++
++  // Verify url fragment is cleared in referrer chain.
++  VerifyReferrerChainEntry(expected_landing_url,              // url
++                           GURL(),                            // main_frame_url
++                           ReferrerChainEntry::LANDING_PAGE,  // type
++                           test_server_ip,                    // ip_address
++                           expected_landing_referrer_url_with_query,
++                           GURL(),               // referrer_main_frame_url
++                           false,                // is_retargeting
++                           std::vector<GURL>(),  // server redirects
++                           referrer_chain.Get(0));
++  VerifyReferrerChainEntry(
++      expected_landing_referrer_url_with_query,  // url
++      GURL(),                                    // main_frame_url
++      ReferrerChainEntry::LANDING_REFERRER,      // type
++      test_server_ip,                            // ip_address
++      GURL(),  // referrer_url is empty since this beyonds 2 clicks.
++      GURL(),  // referrer_main_frame_url is empty for the same reason.
++      false,   // is_retargeting
++      std::vector<GURL>(),  // server redirects
++      referrer_chain.Get(1));
++}
++
+ IN_PROC_BROWSER_TEST_F(SBNavigationObserverBrowserTest,
+                        VerifySanitizeReferrerChain) {
+   GURL initial_url = embedded_test_server()->GetURL(kSingleFrameTestURL);
+diff --git a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.cc b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.cc
+index dbbbcd4..c4b717a1 100644
+--- a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.cc
++++ b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.cc
+@@ -175,7 +175,7 @@
+ 
+ void NavigationEventList::RecordNavigationEvent(
+     std::unique_ptr<NavigationEvent> nav_event) {
+-  // Skip page refresh.
++  // Skip page refresh and in-page navigation.
+   if (nav_event->source_url == nav_event->GetDestinationUrl() &&
+       nav_event->source_tab_id == nav_event->target_tab_id)
+     return;
+@@ -206,8 +206,8 @@
+ }
+ 
+ // static
+-GURL SafeBrowsingNavigationObserverManager::ClearEmptyRef(const GURL& url) {
+-  if (url.has_ref() && url.ref().empty()) {
++GURL SafeBrowsingNavigationObserverManager::ClearURLRef(const GURL& url) {
++  if (url.has_ref()) {
+     url::Replacements<char> replacements;
+     replacements.ClearRef();
+     return url.ReplaceComponents(replacements);
+@@ -341,7 +341,7 @@
+     return INVALID_URL;
+ 
+   NavigationEvent* nav_event = navigation_event_list_.FindNavigationEvent(
+-      event_url, GURL(), event_tab_id);
++      ClearURLRef(event_url), GURL(), event_tab_id);
+   if (!nav_event) {
+     // We cannot find a single navigation event related to this event.
+     return NAVIGATION_EVENT_NOT_FOUND;
+@@ -364,12 +364,13 @@
+     content::WebContents* web_contents,
+     int user_gesture_count_limit,
+     ReferrerChain* out_referrer_chain) {
+-  if (!web_contents || !web_contents->GetLastCommittedURL().is_valid())
++  GURL last_committed_url = web_contents->GetLastCommittedURL();
++  if (!web_contents || !last_committed_url.is_valid())
+     return INVALID_URL;
+   bool has_user_gesture = HasUserGesture(web_contents);
+   int tab_id = SessionTabHelper::IdForTab(web_contents);
+   return IdentifyReferrerChainByHostingPage(
+-      web_contents->GetLastCommittedURL(), GURL(), tab_id, has_user_gesture,
++      ClearURLRef(last_committed_url), GURL(), tab_id, has_user_gesture,
+       user_gesture_count_limit, out_referrer_chain);
+ }
+ 
+@@ -385,7 +386,8 @@
+     return INVALID_URL;
+ 
+   NavigationEvent* nav_event = navigation_event_list_.FindNavigationEvent(
+-      initiating_frame_url, initiating_main_frame_url, tab_id);
++      ClearURLRef(initiating_frame_url), ClearURLRef(initiating_main_frame_url),
++      tab_id);
+   if (!nav_event) {
+     // We cannot find a single navigation event related to this hosting page.
+     return NAVIGATION_EVENT_NOT_FOUND;
+@@ -434,18 +436,17 @@
+   // Remove the "#" at the end of URL, since it does not point to any actual
+   // page fragment ID.
+   GURL cleaned_target_url =
+-      SafeBrowsingNavigationObserverManager::ClearEmptyRef(target_url);
++      SafeBrowsingNavigationObserverManager::ClearURLRef(target_url);
+ 
+   std::unique_ptr<NavigationEvent> nav_event =
+       base::MakeUnique<NavigationEvent>();
+   if (rfh) {
+-    nav_event->source_url =
+-        SafeBrowsingNavigationObserverManager::ClearEmptyRef(
+-            rfh->GetLastCommittedURL());
++    nav_event->source_url = SafeBrowsingNavigationObserverManager::ClearURLRef(
++        rfh->GetLastCommittedURL());
+   }
+   nav_event->source_tab_id = SessionTabHelper::IdForTab(source_web_contents);
+   nav_event->source_main_frame_url =
+-      SafeBrowsingNavigationObserverManager::ClearEmptyRef(
++      SafeBrowsingNavigationObserverManager::ClearURLRef(
+           source_web_contents->GetLastCommittedURL());
+   nav_event->original_request_url = cleaned_target_url;
+   nav_event->target_tab_id = SessionTabHelper::IdForTab(target_web_contents);
+diff --git a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.h b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.h
+index 55b2d85..15a6c6f 100644
+--- a/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.h
++++ b/chrome/browser/safe_browsing/safe_browsing_navigation_observer_manager.h
+@@ -111,11 +111,12 @@
+   // kUserGestureTTLInSecond.
+   static bool IsUserGestureExpired(const base::Time& timestamp);
+ 
+-  // Helper function to strip empty ref fragment from a URL. Many pages
+-  // end up with a "#" at the end of their URLs due to navigation triggered by
++  // Helper function to strip ref fragment from a URL. Many pages end up with a
++  // fragment (e.g. http://bar.com/index.html#foo) at the end due to in-page
++  // navigation or a single "#" at the end due to navigation triggered by
+   // href="#" and javascript onclick function. We don't want to have separate
+   // entries for these cases in the maps.
+-  static GURL ClearEmptyRef(const GURL& url);
++  static GURL ClearURLRef(const GURL& url);
+ 
+   // Checks if we should enable observing navigations for safe browsing purpose.
+   // Return true if the safe browsing safe browsing service is enabled and
+diff --git a/chrome/test/data/safe_browsing/download_protection/navigation_observer/landing_referrer.html b/chrome/test/data/safe_browsing/download_protection/navigation_observer/landing_referrer.html
+index d7f2927..494c885 100644
+--- a/chrome/test/data/safe_browsing/download_protection/navigation_observer/landing_referrer.html
++++ b/chrome/test/data/safe_browsing/download_protection/navigation_observer/landing_referrer.html
+@@ -13,5 +13,8 @@
+     <a id="link_to_landing" href="landing.html">
+       Link to landing
+     </a><br>
++    <a id="link_to_landing_with_empty_fragment" href="landing.html#">
++      Link to landing with empty fragment
++    </a><br>
+   </body>
+ </html>
+diff --git a/chrome/test/data/safe_browsing/download_protection/navigation_observer/navigation_observer_tests.html b/chrome/test/data/safe_browsing/download_protection/navigation_observer/navigation_observer_tests.html
+index d813124..6dcc73c 100644
+--- a/chrome/test/data/safe_browsing/download_protection/navigation_observer/navigation_observer_tests.html
++++ b/chrome/test/data/safe_browsing/download_protection/navigation_observer/navigation_observer_tests.html
+@@ -145,5 +145,9 @@
+       Download via HTML5 file system API without trigger navigation
+     </button><br>
+ 
++    <a id="attribution_should_ignore_url_fragments" href="page_before_landing_referrer.html">
++      Attribution should ignore url fragments.
++    </a><br>
++
+   </body>
+ </html>
+diff --git a/chrome/test/data/safe_browsing/download_protection/navigation_observer/page_before_landing_referrer.html b/chrome/test/data/safe_browsing/download_protection/navigation_observer/page_before_landing_referrer.html
+index 1c898f7..f52f5a0 100644
+--- a/chrome/test/data/safe_browsing/download_protection/navigation_observer/page_before_landing_referrer.html
++++ b/chrome/test/data/safe_browsing/download_protection/navigation_observer/page_before_landing_referrer.html
+@@ -15,5 +15,8 @@
+     <a id="link_to_landing_referrer" href="landing_referrer.html">
+       Link to landing referrer
+     </a><br>
++    <a id="link_to_landing_referrer_with_query_and_fragment" href="landing_referrer.html?bar=foo#baz">
++      Link to landing referrer with query and fragment
++    </a><br>
+   </body>
+ </html>
+--- a/chrome/android/java/src/org/chromium/chrome/browser/IntentHandler.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/IntentHandler.java
+@@ -28,6 +28,7 @@
+ import org.chromium.base.metrics.RecordUserAction;
+ import org.chromium.blink_public.web.WebReferrerPolicy;
+ import org.chromium.chrome.browser.browserservices.BrowserSessionContentUtils;
++import org.chromium.chrome.browser.document.ChromeLauncherActivity;
+ import org.chromium.chrome.browser.externalauth.ExternalAuthUtils;
+ import org.chromium.chrome.browser.externalnav.ExternalNavigationDelegateImpl;
+ import org.chromium.chrome.browser.externalnav.IntentWithGesturesHandler;
+@@ -236,15 +237,6 @@
+     public static final String GOOGLECHROME_NAVIGATE_PREFIX =
+             GOOGLECHROME_SCHEME + "://navigate?url=";
+ 
+-    /**
+-     * The class name to be specified in the ComponentName for Intents that are creating a new
+-     * tab (regardless of whether the user is in document or tabbed mode).
+-     */
+-    // TODO(tedchoc): Remove this and directly reference the Launcher activity when that becomes
+-    //                publicly available.
+-    private static final String TAB_ACTIVITY_COMPONENT_CLASS_NAME =
+-            "com.google.android.apps.chrome.Main";
+-
+     private static boolean sTestIntentsEnabled;
+ 
+     private final IntentHandlerDelegate mDelegate;
+@@ -610,7 +602,7 @@
+     public static void startChromeLauncherActivityForTrustedIntent(Intent intent) {
+         // Specify the exact component that will handle creating a new tab.  This allows specifying
+         // URLs that are not exposed in the intent filters (i.e. chrome://).
+-        startActivityForTrustedIntentInternal(intent, TAB_ACTIVITY_COMPONENT_CLASS_NAME);
++        startActivityForTrustedIntentInternal(intent, ChromeLauncherActivity.class.getName());
+     }
+ 
+     private static void startActivityForTrustedIntentInternal(
+--- a/net/quic/core/quic_stream_sequencer_buffer.cc
++++ b/net/quic/core/quic_stream_sequencer_buffer.cc
+@@ -102,7 +102,10 @@
+     ++current_gap;
+   }
+ 
+-  DCHECK(current_gap != gaps_.end());
++  if (current_gap == gaps_.end()) {
++    *error_details = "Received stream data outside of maximum range.";
++    return QUIC_INTERNAL_ERROR;
++  }
+ 
+   // "duplication": might duplicate with data alread filled,but also might
+   // overlap across different QuicStringPiece objects already written.
+@@ -138,7 +141,8 @@
+   }
+ 
+   // Write beyond the current range this buffer is covering.
+-  if (offset + size > total_bytes_read_ + max_buffer_capacity_bytes_) {
++  if (offset + size > total_bytes_read_ + max_buffer_capacity_bytes_ ||
++      offset + size < offset) {
+     *error_details = "Received data beyond available range.";
+     return QUIC_INTERNAL_ERROR;
+   }
+diff --git a/net/quic/core/quic_stream_sequencer_buffer_test.cc b/net/quic/core/quic_stream_sequencer_buffer_test.cc
+index 88c9a0c..344ca58 100644
+--- a/net/quic/core/quic_stream_sequencer_buffer_test.cc
++++ b/net/quic/core/quic_stream_sequencer_buffer_test.cc
+@@ -297,6 +297,21 @@
+                                   clock_.ApproximateNow(), &written,
+                                   &error_details_));
+   EXPECT_TRUE(helper_->CheckBufferInvariants());
++
++  // Disallow current_gap != gaps_.end()
++  EXPECT_EQ(QUIC_INTERNAL_ERROR,
++            buffer_->OnStreamData(static_cast<QuicStreamOffset>(-1), source,
++                                  clock_.ApproximateNow(), &written,
++                                  &error_details_));
++  EXPECT_TRUE(helper_->CheckBufferInvariants());
++
++  // Disallow offset + size overflow
++  source = "bbb";
++  EXPECT_EQ(QUIC_INTERNAL_ERROR,
++            buffer_->OnStreamData(static_cast<QuicStreamOffset>(-2), source,
++                                  clock_.ApproximateNow(), &written,
++                                  &error_details_));
++  EXPECT_TRUE(helper_->CheckBufferInvariants());
+   EXPECT_EQ(0u, buffer_->BytesBuffered());
+ }
+ 
+--- a/content/browser/browser_plugin/browser_plugin_guest.cc
++++ b/content/browser/browser_plugin/browser_plugin_guest.cc
+@@ -703,8 +703,10 @@
+   if (attached()) {
+     RenderWidgetHostViewGuest* rwhv = static_cast<RenderWidgetHostViewGuest*>(
+         web_contents()->GetRenderWidgetHostView());
+-    SendMessageToEmbedder(base::MakeUnique<BrowserPluginMsg_GuestReady>(
+-        browser_plugin_instance_id(), rwhv->GetFrameSinkId()));
++    if (rwhv) {
++      SendMessageToEmbedder(std::make_unique<BrowserPluginMsg_GuestReady>(
++          browser_plugin_instance_id(), rwhv->GetFrameSinkId()));
++    }
+   }
+ 
+   RenderWidgetHostImpl::From(rvh->GetWidget())
+--- a/third_party/WebKit/LayoutTests/http/tests/devtools/tracing/timeline-paint/timeline-paint-image.html
++++ b/third_party/WebKit/LayoutTests/http/tests/devtools/tracing/timeline-paint/timeline-paint-image.html
+@@ -31,6 +31,7 @@
+ function display()
+ {
+     addImage("../resources/test.png", "40px", "30px");
++    addCSSImage("//:0", "30px", "20px"); // should be ignored, see https://crbug.com/776940
+     addCSSImage("../resources/test.png", "30px", "20px");
+     return waitForFrame();
+ }
+diff --git a/third_party/WebKit/Source/core/paint/BoxPainterBase.cpp b/third_party/WebKit/Source/core/paint/BoxPainterBase.cpp
+index bffe5f5..6382fde 100644
+--- a/third_party/WebKit/Source/core/paint/BoxPainterBase.cpp
++++ b/third_party/WebKit/Source/core/paint/BoxPainterBase.cpp
+@@ -493,7 +493,9 @@
+   }
+ 
+   // No progressive loading of the background image.
+-  if (info.should_paint_image && !geometry.DestRect().IsEmpty()) {
++  // NOTE: This method can be called with no image in situations when a bad
++  // resource locator is given such as "//:0", so still check for image.
++  if (info.should_paint_image && !geometry.DestRect().IsEmpty() && image) {
+     TRACE_EVENT1(
+         TRACE_DISABLED_BY_DEFAULT("devtools.timeline"), "PaintImage", "data",
+         InspectorPaintImageEvent::Data(node_, *info.image, image->Rect(),
+--- a/chrome/android/java/AndroidManifest.xml
++++ b/chrome/android/java/AndroidManifest.xml
+@@ -396,8 +396,13 @@
+             </intent-filter>
+             {% endblock %}
+         </activity>
++        <!-- TODO(crbug.com/780674): retarget .Main back to CTA for non-modern APK -->
+         <activity-alias android:name="com.google.android.apps.chrome.Main"
++            {% if min_sdk_version|int < 21 %}
++            android:targetActivity="org.chromium.chrome.browser.document.ChromeLauncherActivity"
++            {% else %}
+             android:targetActivity="org.chromium.chrome.browser.ChromeTabbedActivity"
++            {% endif %}
+             android:exported="true">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />

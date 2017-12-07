@@ -1,0 +1,188 @@
+diff --git a/ios/chrome/browser/ui/toolbar/BUILD.gn b/ios/chrome/browser/ui/toolbar/BUILD.gn
+index 9ac010b..c2986eb 100644
+--- a/ios/chrome/browser/ui/toolbar/BUILD.gn
++++ b/ios/chrome/browser/ui/toolbar/BUILD.gn
+@@ -17,7 +17,6 @@
+     "toolbar_controller_constants.mm",
+     "toolbar_coordinator.h",
+     "toolbar_coordinator.mm",
+-    "toolbar_frame_delegate.h",
+     "toolbar_model_delegate_ios.h",
+     "toolbar_model_delegate_ios.mm",
+     "toolbar_model_impl_ios.h",
+@@ -28,6 +27,7 @@
+     "toolbar_tools_menu_button.mm",
+     "toolbar_view.h",
+     "toolbar_view.mm",
++    "toolbar_view_delegate.h",
+     "tools_menu_button_observer_bridge.h",
+     "tools_menu_button_observer_bridge.mm",
+     "web_toolbar_controller.h",
+diff --git a/ios/chrome/browser/ui/toolbar/toolbar_frame_delegate.h b/ios/chrome/browser/ui/toolbar/toolbar_frame_delegate.h
+deleted file mode 100644
+index 4def7ba..0000000
+--- a/ios/chrome/browser/ui/toolbar/toolbar_frame_delegate.h
++++ /dev/null
+@@ -1,18 +0,0 @@
+-// Copyright 2017 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-#ifndef IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_FRAME_DELEGATE_H_
+-#define IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_FRAME_DELEGATE_H_
+-
+-#import <Foundation/Foundation.h>
+-
+-// Create a thin wrapper around UIImageView to catch frame change and window
+-// events.
+-@protocol ToolbarFrameDelegate<NSObject>
+-- (void)frameDidChangeFrame:(CGRect)newFrame fromFrame:(CGRect)oldFrame;
+-- (void)windowDidChange;
+-- (void)traitCollectionDidChange;
+-@end
+-
+-#endif  // IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_FRAME_DELEGATE_H_
+diff --git a/ios/chrome/browser/ui/toolbar/toolbar_view.h b/ios/chrome/browser/ui/toolbar/toolbar_view.h
+index 8712d73..d37320b 100644
+--- a/ios/chrome/browser/ui/toolbar/toolbar_view.h
++++ b/ios/chrome/browser/ui/toolbar/toolbar_view.h
+@@ -9,7 +9,7 @@
+ 
+ #import "ios/chrome/browser/ui/util/relaxed_bounds_constraints_hittest.h"
+ 
+-@protocol ToolbarFrameDelegate;
++@protocol ToolbarViewDelegate;
+ 
+ @interface ToolbarView : UIView<RelaxedBoundsConstraintsHitTestSupport>
+ - (instancetype)initWithNibName:(NSString*)name
+@@ -17,7 +17,7 @@
+ - (instancetype)initWithCoder:(NSCoder*)coder NS_UNAVAILABLE;
+ 
+ // The delegate used to handle frame changes and windows events.
+-@property(nonatomic, weak) id<ToolbarFrameDelegate> delegate;
++@property(nonatomic, weak) id<ToolbarViewDelegate> delegate;
+ // Records whether or not the toolbar is currently involved in a transition
+ // animation.
+ @property(nonatomic, assign, getter=isAnimatingTransition)
+diff --git a/ios/chrome/browser/ui/toolbar/toolbar_view.mm b/ios/chrome/browser/ui/toolbar/toolbar_view.mm
+index ef4a858..0c2797a 100644
+--- a/ios/chrome/browser/ui/toolbar/toolbar_view.mm
++++ b/ios/chrome/browser/ui/toolbar/toolbar_view.mm
+@@ -5,7 +5,7 @@
+ #import "ios/chrome/browser/ui/toolbar/toolbar_view.h"
+ 
+ #import "ios/chrome/browser/ui/toolbar/toolbar_controller_base_feature.h"
+-#import "ios/chrome/browser/ui/toolbar/toolbar_frame_delegate.h"
++#import "ios/chrome/browser/ui/toolbar/toolbar_view_delegate.h"
+ 
+ @implementation ToolbarView
+ 
+@@ -57,10 +57,9 @@
+   return hitView;
+ }
+ 
+-- (void)setFrame:(CGRect)frame {
+-  CGRect oldFrame = self.frame;
+-  [super setFrame:frame];
+-  [delegate_ frameDidChangeFrame:frame fromFrame:oldFrame];
++- (void)layoutSubviews {
++  [super layoutSubviews];
++  [delegate_ toolbarDidLayout];
+ }
+ 
+ - (void)didMoveToWindow {
+diff --git a/ios/chrome/browser/ui/toolbar/toolbar_view_delegate.h b/ios/chrome/browser/ui/toolbar/toolbar_view_delegate.h
+new file mode 100644
+index 0000000..e7e85d2
+--- /dev/null
++++ b/ios/chrome/browser/ui/toolbar/toolbar_view_delegate.h
+@@ -0,0 +1,26 @@
++// Copyright 2017 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_VIEW_DELEGATE_H_
++#define IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_VIEW_DELEGATE_H_
++
++#import <Foundation/Foundation.h>
++
++// A delegate protocol to pass UIView information about the toolbar.
++// TODO(crbug.com/683793): Remove this protocol when toolbars are presented via
++// UIViewControllers, as this can already be accomplished through that API.
++@protocol ToolbarViewDelegate<NSObject>
++
++// Called when the toolbar view performs a layout pass.
++- (void)toolbarDidLayout;
++
++// Called when the toolbar view is transferred to a new parent window.
++- (void)windowDidChange;
++
++// Called when the toolbar view's trait collection changes.
++- (void)traitCollectionDidChange;
++
++@end
++
++#endif  // IOS_CHROME_BROWSER_UI_TOOLBAR_TOOLBAR_VIEW_DELEGATE_H_
+diff --git a/ios/chrome/browser/ui/toolbar/web_toolbar_controller.h b/ios/chrome/browser/ui/toolbar/web_toolbar_controller.h
+index bc518aa..ecaacf6 100644
+--- a/ios/chrome/browser/ui/toolbar/web_toolbar_controller.h
++++ b/ios/chrome/browser/ui/toolbar/web_toolbar_controller.h
+@@ -19,7 +19,6 @@
+ @protocol ApplicationCommands;
+ @protocol BrowserCommands;
+ @class Tab;
+-@protocol ToolbarFrameDelegate;
+ @protocol UrlLoader;
+ @protocol WebToolbarDelegate;
+ 
+diff --git a/ios/chrome/browser/ui/toolbar/web_toolbar_controller.mm b/ios/chrome/browser/ui/toolbar/web_toolbar_controller.mm
+index 6573de5..15bf92a 100644
+--- a/ios/chrome/browser/ui/toolbar/web_toolbar_controller.mm
++++ b/ios/chrome/browser/ui/toolbar/web_toolbar_controller.mm
+@@ -56,7 +56,7 @@
+ #import "ios/chrome/browser/ui/toolbar/keyboard_assist/toolbar_assistive_keyboard_views.h"
+ #import "ios/chrome/browser/ui/toolbar/toolbar_controller+protected.h"
+ #import "ios/chrome/browser/ui/toolbar/toolbar_controller_base_feature.h"
+-#import "ios/chrome/browser/ui/toolbar/toolbar_frame_delegate.h"
++#import "ios/chrome/browser/ui/toolbar/toolbar_view_delegate.h"
+ #import "ios/chrome/browser/ui/toolbar/toolbar_model_ios.h"
+ #include "ios/chrome/browser/ui/toolbar/toolbar_resource_macros.h"
+ #import "ios/chrome/browser/ui/toolbar/web_toolbar_controller_constants.h"
+@@ -100,7 +100,7 @@
+                                    LocationBarDelegate,
+                                    OmniboxPopupPositioner,
+                                    ToolbarAssistiveKeyboardDelegate,
+-                                   ToolbarFrameDelegate> {
++                                   ToolbarViewDelegate> {
+   // Top-level view for web content.
+   UIView* _webToolbar;
+   UIButton* _backButton;
+@@ -138,6 +138,9 @@
+   // reversed.
+   ToolbarButtonMode _forwardButtonMode;
+ 
++  // Keeps track of the last known toolbar frame.
++  CGRect _lastKnownToolbarFrame;
++
+   // Keeps track of last known trait collection used by the subviews.
+   UITraitCollection* _lastKnownTraitCollection;
+ 
+@@ -1199,12 +1202,14 @@
+ }
+ 
+ #pragma mark -
+-#pragma mark ToolbarFrameDelegate methods.
++#pragma mark ToolbarViewDelegate methods.
+ 
+-- (void)frameDidChangeFrame:(CGRect)newFrame fromFrame:(CGRect)oldFrame {
+-  if (oldFrame.origin.y == newFrame.origin.y)
++- (void)toolbarDidLayout {
++  CGRect frame = self.view.frame;
++  if (CGRectEqualToRect(_lastKnownToolbarFrame, frame))
+     return;
+-  [self updateToolbarAlphaForFrame:newFrame];
++  [self updateToolbarAlphaForFrame:frame];
++  _lastKnownToolbarFrame = frame;
+ }
+ 
+ - (void)windowDidChange {

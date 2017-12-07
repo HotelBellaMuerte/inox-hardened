@@ -1,0 +1,204 @@
+diff --git a/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resource_subframe_self_navigation.html b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resource_subframe_self_navigation.html
+new file mode 100644
+index 0000000..5843f88
+--- /dev/null
++++ b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resource_subframe_self_navigation.html
+@@ -0,0 +1,53 @@
++<!DOCTYPE html>
++<script src="/resources/testharness.js"></script>
++<script src="/resources/testharnessreport.js"></script>
++<body>
++<script>
++function numberOfDownloads(url) {
++    let absoluteURL = new URL(url, location.href).href;
++    return performance.getEntriesByName(absoluteURL).length;
++}
++
++function waitForSubFrameLoad() {
++    return new Promise((resolve) => {
++        window.subFrameLoaded = () => {
++            window.subFrameLoaded = null;
++            resolve();
++        };
++    });
++}
++
++function runTest(type) {
++    performance.clearResourceTimings();
++    let elem = document.createElement(type);
++    if (type === 'object')
++        elem.data = 'resources/self_navigation.html?' + type;
++    else
++        elem.src = 'resources/self_navigation.html?' + type;
++    document.body.appendChild(elem);
++    return waitForSubFrameLoad().then(() => {
++        let resources = performance.getEntriesByType('resource');
++        assert_equals(numberOfDownloads('resources/self_navigation.html?' + type), 1);
++        assert_equals(numberOfDownloads('resources/notify_parent.html?redirected'), 0);
++        document.body.removeChild(elem);
++    });
++}
++
++promise_test(
++    () => runTest('iframe'),
++    "Subsequent <iframe> navigations don't appear in the resource-timing buffer.");
++
++promise_test(
++    () => runTest('frame'),
++    "Subsequent <frame> navigations don't appear in the resource-timing buffer.");
++
++promise_test(
++    () => runTest('embed'),
++    "Subsequent <embed> navigations don't appear in the resource-timing buffer.");
++
++promise_test(
++    () => runTest('object'),
++    "Subsequent <object> navigations don't appear in the resource-timing buffer.");
++
++</script>
++</body>
+diff --git a/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/notify_parent.html b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/notify_parent.html
+new file mode 100644
+index 0000000..c104f3c
+--- /dev/null
++++ b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/notify_parent.html
+@@ -0,0 +1,4 @@
++<!DOCTYPE html>
++<script>
++window.parent.subFrameLoaded();
++</script>
+diff --git a/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/self_navigation.html b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/self_navigation.html
+new file mode 100644
+index 0000000..beb12f5
+--- /dev/null
++++ b/third_party/WebKit/LayoutTests/external/wpt/resource-timing/resources/self_navigation.html
+@@ -0,0 +1 @@
++<meta http-equiv="refresh" content="0;url=notify_parent.html?redirected">
+diff --git a/third_party/WebKit/LayoutTests/http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_iframe_self_navigation.html b/third_party/WebKit/LayoutTests/http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_iframe_self_navigation.html
+deleted file mode 100644
+index 7102f3b..0000000
+--- a/third_party/WebKit/LayoutTests/http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_iframe_self_navigation.html
++++ /dev/null
+@@ -1,48 +0,0 @@
+-<!DOCTYPE html>
+-<html>
+-<head>
+-<meta charset="utf-8" />
+-<title>Resource Timing self navigating iframes</title>
+-<link rel="author" title="Google" href="http://www.google.com/" />
+-<link rel="help" href="http://www.w3.org/TR/resource-timing/#dom-performanceresourcetiming-initiatortype"/>
+-<script src="/w3c/resources/testharness.js"></script>
+-<script src="/w3c/resources/testharnessreport.js"></script>
+-<script src="/w3c/webperf/resources/webperftestharness.js"></script>
+-<script src="/w3c/webperf/resources/webperftestharnessextension.js"></script>
+-<script>
+-setup({explicit_done: true});
+-var d;
+-var iframe;
+-var iframeBody;
+-function setup_iframe() {
+-    var iframe_content = '<iframe id="innerFrame" src="/w3c/webperf/resources/inject_resource_test.html"></iframe>';
+-    iframe = document.getElementById('frameContext');
+-    d = iframe.contentWindow.document;
+-    d.write(iframe_content);
+-    iframe.contentWindow.setup_iframe = setup_inner_iframe;
+-}
+-function setup_inner_iframe() {
+-    var iframe_content = '<script>window.location = "/w3c/webperf/resources/generate_resource.php?type=iframe";</scr' + 'ipt>';
+-    var inner_iframe = d.getElementById('innerFrame');
+-    inner_iframe.contentWindow.document.write(iframe_content);
+-    inner_iframe.addEventListener("load", onload_test);
+-}
+-function onload_test() {
+-    var context = new PerformanceContext(iframe.contentWindow.performance);
+-    var entries = context.getEntriesByType('resource');
+-    var expected_entries = {
+-        '/w3c/webperf/resources/inject_resource_test.html': 'iframe',
+-    };
+-    test_resource_entries(entries, expected_entries);
+-    done();
+-}
+-window.setup_iframe = setup_iframe;
+-</script>
+-</head>
+-<body>
+-<h1>Description</h1>
+-<p>This test validates that iframes that navigate themselves don't appear in the buffer.</p>
+-<div id="log"></div>
+-<iframe id="frameContext" src="/w3c/webperf/resources/inject_resource_test.html"></iframe>
+-</body>
+-</html>
+diff --git a/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.cpp b/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.cpp
+index d147c80..9b89d49 100644
+--- a/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.cpp
++++ b/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.cpp
+@@ -78,7 +78,8 @@
+     : HTMLElement(tag_name, document),
+       content_frame_(nullptr),
+       embedded_content_view_(nullptr),
+-      sandbox_flags_(kSandboxNone) {}
++      sandbox_flags_(kSandboxNone),
++      did_load_non_empty_document_(false) {}
+ 
+ LayoutEmbeddedContent* HTMLFrameOwnerElement::GetLayoutEmbeddedContent() const {
+   // HTMLObjectElement and HTMLEmbedElement may return arbitrary layoutObjects
+diff --git a/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.h b/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.h
+index e3372cf..686f8477 100644
+--- a/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.h
++++ b/third_party/WebKit/Source/core/html/HTMLFrameOwnerElement.h
+@@ -63,8 +63,8 @@
+ 
+   Document* getSVGDocument(ExceptionState&) const;
+ 
+-  virtual bool LoadedNonEmptyDocument() const { return false; }
+-  virtual void DidLoadNonEmptyDocument() {}
++  bool LoadedNonEmptyDocument() const { return did_load_non_empty_document_; }
++  void DidLoadNonEmptyDocument() { did_load_non_empty_document_ = true; }
+ 
+   void SetEmbeddedContentView(EmbeddedContentView*);
+   EmbeddedContentView* ReleaseEmbeddedContentView();
+@@ -169,6 +169,7 @@
+   Member<Frame> content_frame_;
+   Member<EmbeddedContentView> embedded_content_view_;
+   SandboxFlags sandbox_flags_;
++  bool did_load_non_empty_document_;
+ 
+   WebParsedFeaturePolicy container_policy_;
+ };
+diff --git a/third_party/WebKit/Source/core/html/HTMLIFrameElement.cpp b/third_party/WebKit/Source/core/html/HTMLIFrameElement.cpp
+index 21b01c7..793b2ea 100644
+--- a/third_party/WebKit/Source/core/html/HTMLIFrameElement.cpp
++++ b/third_party/WebKit/Source/core/html/HTMLIFrameElement.cpp
+@@ -39,7 +39,6 @@
+ 
+ inline HTMLIFrameElement::HTMLIFrameElement(Document& document)
+     : HTMLFrameElementBase(iframeTag, document),
+-      did_load_non_empty_document_(false),
+       collapsed_by_client_(false),
+       sandbox_(HTMLIFrameElementSandbox::Create(this)),
+       referrer_policy_(kReferrerPolicyDefault) {}
+diff --git a/third_party/WebKit/Source/core/html/HTMLIFrameElement.h b/third_party/WebKit/Source/core/html/HTMLIFrameElement.h
+index 548306c..676f599 100644
+--- a/third_party/WebKit/Source/core/html/HTMLIFrameElement.h
++++ b/third_party/WebKit/Source/core/html/HTMLIFrameElement.h
+@@ -66,12 +66,6 @@
+   bool LayoutObjectIsNeeded(const ComputedStyle&) override;
+   LayoutObject* CreateLayoutObject(const ComputedStyle&) override;
+ 
+-  bool LoadedNonEmptyDocument() const override {
+-    return did_load_non_empty_document_;
+-  }
+-  void DidLoadNonEmptyDocument() override {
+-    did_load_non_empty_document_ = true;
+-  }
+   bool IsInteractiveContent() const override;
+ 
+   ReferrerPolicy ReferrerPolicyAttribute() override;
+@@ -84,7 +78,6 @@
+   AtomicString name_;
+   AtomicString csp_;
+   AtomicString allow_;
+-  bool did_load_non_empty_document_;
+   bool allow_fullscreen_;
+   bool allow_payment_request_;
+   bool collapsed_by_client_;

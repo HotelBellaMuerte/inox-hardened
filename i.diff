@@ -1,0 +1,399 @@
+diff --git a/chrome/android/java/AndroidManifest.xml b/chrome/android/java/AndroidManifest.xml
+index 3551d19..e146df1 100644
+--- a/chrome/android/java/AndroidManifest.xml
++++ b/chrome/android/java/AndroidManifest.xml
+@@ -442,18 +442,21 @@
+         </activity>
+         <activity android:name="org.chromium.chrome.browser.firstrun.LightweightFirstRunActivity"
+             android:theme="@style/SimpleDialog"
+-            android:launchMode="singleInstance"
+-            android:autoRemoveFromRecents="true"
+-            android:windowSoftInputMode="stateHidden|adjustPan"
+-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|mcc|mnc|screenLayout|smallestScreenSize">
++            {{ self.first_run_activity_common() }}>
+         </activity>
+         <activity android:name="org.chromium.chrome.browser.firstrun.FirstRunActivity"
+-            android:theme="@style/DialogWhenLarge"
++            android:theme="@style/FirstRunTheme"
++            {% block first_run_activity_common %}
+             android:launchMode="singleInstance"
+             android:excludeFromRecents="true"
+             android:autoRemoveFromRecents="true"
+             android:windowSoftInputMode="stateHidden|adjustPan"
+             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|mcc|mnc|screenLayout|smallestScreenSize">
++            {% endblock %}
++        </activity>
++        <activity android:name="org.chromium.chrome.browser.firstrun.TabbedModeFirstRunActivity"
++            android:theme="@style/TabbedModeFirstRunTheme"
++            {{ self.first_run_activity_common() }}>
+         </activity>
+         {% if enable_vr == "true" %}
+         <activity android:name="org.chromium.chrome.browser.vr_shell.VrFirstRunActivity"
+diff --git a/chrome/android/java/res/drawable-sw600dp/window_background.xml b/chrome/android/java/res/drawable-sw600dp/window_background.xml
+index ec92a59..b0a1746 100644
+--- a/chrome/android/java/res/drawable-sw600dp/window_background.xml
++++ b/chrome/android/java/res/drawable-sw600dp/window_background.xml
+@@ -5,9 +5,14 @@
+ 
+ <layer-list
+     xmlns:android="http://schemas.android.com/apk/res/android" >
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="@android:color/black" />
++        </shape>
++    </item>
+     <item
+         android:top="25dp"
+         android:bottom="0px">
+-        <nine-patch android:src="@drawable/toolbar_background" />
+-    </item>
+-</layer-list>
+\ No newline at end of file
++      <nine-patch android:src="@drawable/toolbar_background" />
++  </item>
++</layer-list>
+diff --git a/chrome/android/java/res/drawable-sw720dp-v19/window_background.xml b/chrome/android/java/res/drawable-sw720dp-v19/window_background.xml
+index da76c26..527afabec 100644
+--- a/chrome/android/java/res/drawable-sw720dp-v19/window_background.xml
++++ b/chrome/android/java/res/drawable-sw720dp-v19/window_background.xml
+@@ -6,9 +6,14 @@
+ <!-- Tablets from api 19 and up have the top notification bar -->
+ <layer-list
+     xmlns:android="http://schemas.android.com/apk/res/android" >
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="@android:color/black" />
++        </shape>
++    </item>
+     <item
+         android:top="25dp"
+         android:bottom="0px">
+         <nine-patch android:src="@drawable/toolbar_background" />
+     </item>
+-</layer-list>
+\ No newline at end of file
++</layer-list>
+diff --git a/chrome/android/java/res/drawable-sw720dp/window_background.xml b/chrome/android/java/res/drawable-sw720dp/window_background.xml
+index a0a7841..d1940b8 100644
+--- a/chrome/android/java/res/drawable-sw720dp/window_background.xml
++++ b/chrome/android/java/res/drawable-sw720dp/window_background.xml
+@@ -9,4 +9,4 @@
+     <item>
+         <nine-patch android:src="@drawable/toolbar_background" />
+     </item>
+-</layer-list>
+\ No newline at end of file
++</layer-list>
+diff --git a/chrome/android/java/res/values-large/dimens.xml b/chrome/android/java/res/values-large/dimens.xml
+index bfa99b4..5c0d5b5 100644
+--- a/chrome/android/java/res/values-large/dimens.xml
++++ b/chrome/android/java/res/values-large/dimens.xml
+@@ -5,4 +5,11 @@
+ 
+ <resources>
+     <dimen name="fre_content_margin">60dp</dimen>
++
++    <!-- Copy of corresponding abc_* values from AppCompat. Used by
++         TabbedModeFirstRunActivity to simulate DialogWhenLarge layout. -->
++    <item type="dimen" name="dialog_fixed_width_major">60%</item>
++    <item type="dimen" name="dialog_fixed_width_minor">90%</item>
++    <item type="dimen" name="dialog_fixed_height_major">60%</item>
++    <item type="dimen" name="dialog_fixed_height_minor">90%</item>
+ </resources>
+diff --git a/chrome/android/java/res/values-v17/styles.xml b/chrome/android/java/res/values-v17/styles.xml
+index a5940c4..5f9621c3 100644
+--- a/chrome/android/java/res/values-v17/styles.xml
++++ b/chrome/android/java/res/values-v17/styles.xml
+@@ -51,6 +51,12 @@
+         <item name="android:windowBackground">@android:color/white</item>
+     </style>
+ 
++    <style name="FirstRunTheme" parent="DialogWhenLarge">
++    </style>
++
++    <style name="TabbedModeFirstRunTheme" parent="TabbedModeTheme">
++    </style>
++
+     <!-- The theme to use when starting Chrome in VR mode.-->
+     <style name="VrSupportTheme" parent="MainTheme">
+        <!-- Android shows a preview window to give the user immediate feedback that the
+diff --git a/chrome/android/java/res/values-xlarge/dimens.xml b/chrome/android/java/res/values-xlarge/dimens.xml
+new file mode 100644
+index 0000000..2903e47
+--- /dev/null
++++ b/chrome/android/java/res/values-xlarge/dimens.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright 2017 The Chromium Authors. All rights reserved.
++     Use of this source code is governed by a BSD-style license that can be
++     found in the LICENSE file. -->
++
++<resources>
++    <!-- Copy of corresponding abc_* values from AppCompat. Used by
++         TabbedModeFirstRunActivity to simulate DialogWhenLarge layout. -->
++    <item type="dimen" name="dialog_fixed_width_major">50%</item>
++    <item type="dimen" name="dialog_fixed_width_minor">70%</item>
++    <item type="dimen" name="dialog_fixed_height_major">60%</item>
++    <item type="dimen" name="dialog_fixed_height_minor">90%</item>
++</resources>
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunActivity.java
+index ccc8517..27fb508 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunActivity.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunActivity.java
+@@ -7,8 +7,10 @@
+ import android.app.Activity;
+ import android.app.Fragment;
+ import android.os.Bundle;
++import android.support.annotation.CallSuper;
+ import android.support.annotation.StringRes;
+ import android.text.TextUtils;
++import android.view.View;
+ 
+ import org.chromium.base.ActivityState;
+ import org.chromium.base.ApplicationStatus;
+@@ -179,16 +181,26 @@
+         return null;
+     }
+ 
++    /**
++     * Creates the content view for this activity.
++     * The only thing subclasses can do is wrapping the view returned by super implementation
++     * in some extra layout.
++     */
++    @CallSuper
++    protected View createContentView() {
++        mPager = new FirstRunViewPager(this);
++        mPager.setId(R.id.fre_pager);
++        mPager.setOffscreenPageLimit(3);
++        return mPager;
++    }
++
+     @Override
+     public void setContentView() {
+         initializeStateFromLaunchData();
+ 
+         setFinishOnTouchOutside(true);
+ 
+-        mPager = new FirstRunViewPager(this);
+-        mPager.setId(R.id.fre_pager);
+-        mPager.setOffscreenPageLimit(3);
+-        setContentView(mPager);
++        setContentView(createContentView());
+ 
+         mFirstRunFlowSequencer = new FirstRunFlowSequencer(this) {
+             @Override
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunFlowSequencer.java b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunFlowSequencer.java
+index 2674352..17b8111 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunFlowSequencer.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/FirstRunFlowSequencer.java
+@@ -9,6 +9,7 @@
+ import android.app.PendingIntent;
+ import android.content.Context;
+ import android.content.Intent;
++import android.content.res.TypedArray;
+ import android.os.Bundle;
+ import android.support.annotation.Nullable;
+ import android.text.TextUtils;
+@@ -18,6 +19,7 @@
+ import org.chromium.base.CommandLine;
+ import org.chromium.base.Log;
+ import org.chromium.base.VisibleForTesting;
++import org.chromium.chrome.R;
+ import org.chromium.chrome.browser.ChromeSwitches;
+ import org.chromium.chrome.browser.locale.LocaleManager;
+ import org.chromium.chrome.browser.net.spdyproxy.DataReductionProxySettings;
+@@ -366,6 +368,14 @@
+                 freCallerIntent = new Intent(intent);
+                 VrIntentUtils.updateFreCallerIntent(caller, intent);
+             }
++
++            if (maybeSwitchToTabbedMode(caller, freIntent)) {
++                // We switched to TabbedModeFRE. We need to disable animation on the original
++                // intent, to make transition seamless.
++                intent = new Intent(intent);
++                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
++            }
++
+             // Add a PendingIntent so that the intent used to launch Chrome will be resent when
+             // First Run is completed or canceled.
+             addPendingIntent(caller, freIntent, intent, requiresBroadcast);
+@@ -384,4 +394,39 @@
+         }
+         return true;
+     }
++
++    /**
++     * On tablets, where FRE activity is a dialog, transitions from fillscreen activities
++     * (the ones that use TabbedModeTheme, e.g. ChromeTabbedActivity) look ugly, because
++     * when FRE is started from CTA.onCreate(), currently running animation for CTA window
++     * is aborted. This is perceived as a flash of white and doesn't look good.
++     *
++     * To solve this, we added TabbedMode FRE activity, which has the same window background
++     * as TabbedModeTheme activities, but shows content in a FRE-like dialog.
++     *
++     * This function attempts to switch FRE to TabbedModeFRE if certain conditions are met.
++     */
++    private static boolean maybeSwitchToTabbedMode(Context caller, Intent freIntent) {
++        // Caller must be an activity.
++        if (!(caller instanceof Activity)) return false;
++
++        // We must be on a tablet (where FRE is a dialog).
++        boolean isTablet = caller.getResources().getBoolean(R.bool.is_tablet);
++        if (!isTablet) return false;
++
++        // Caller must use a theme with @drawable/window_background (the same background
++        // used by TabbedModeFRE).
++        TypedArray a = caller.obtainStyledAttributes(new int[] {android.R.attr.windowBackground});
++        int backgroundResourceId = a.getResourceId(0 /* index */, 0);
++        a.recycle();
++        if (backgroundResourceId != R.drawable.window_background) return false;
++
++        // Switch FRE -> TabbedModeFRE.
++        if (FirstRunActivity.class.getName().equals(freIntent.getComponent().getClassName())) {
++            freIntent.setClass(caller, TabbedModeFirstRunActivity.class);
++            return true;
++        }
++
++        return false;
++    }
+ }
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java
+new file mode 100644
+index 0000000..08258096
+--- /dev/null
++++ b/chrome/android/java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java
+@@ -0,0 +1,122 @@
++// Copyright 2017 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++package org.chromium.chrome.browser.firstrun;
++
++import android.content.Context;
++import android.util.DisplayMetrics;
++import android.util.TypedValue;
++import android.view.Gravity;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.FrameLayout;
++
++import org.chromium.chrome.R;
++
++/**
++ * FirstRunActivity variant that fills the whole screen, but displays the content
++ * in a dialog-like layout.
++ */
++public class TabbedModeFirstRunActivity extends FirstRunActivity {
++    @Override
++    protected View createContentView() {
++        return wrapInDialogLayout(super.createContentView());
++    }
++
++    /**
++     * Wraps contentView into layout that resembles DialogWhenLarge. The layout centers
++     * the content and dims the background to simulate a modal dialog.
++     */
++    private View wrapInDialogLayout(View contentView) {
++        ContentLayout contentLayout = new ContentLayout(this);
++        contentLayout.addView(contentView);
++
++        contentLayout.setBackgroundResource(R.drawable.bg_white_dialog);
++
++        // We need an outer layout for two things:
++        //   * centering the content
++        //   * dimming the background
++        FrameLayout outerLayout = new FrameLayout(this);
++        outerLayout.addView(contentLayout,
++                new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
++                        ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
++        outerLayout.setBackgroundResource(R.color.modal_dialog_scrim_color);
++        return outerLayout;
++    }
++
++    /**
++     * Layout that sizes itself according to DialogWhenLarge constraints.
++     */
++    private static class ContentLayout extends FrameLayout {
++        private TypedValue mFixedWidthMajor = new TypedValue();
++        private TypedValue mFixedWidthMinor = new TypedValue();
++        private TypedValue mFixedHeightMajor = new TypedValue();
++        private TypedValue mFixedHeightMinor = new TypedValue();
++
++        public ContentLayout(Context context) {
++            super(context);
++            fetchConstraints();
++        }
++
++        private void fetchConstraints() {
++            // Fetch size constraints. These are copies of corresponding abc_* AppCompat values,
++            // because abc_* values are private, and even though corresponding theme attributes
++            // are public in AppCompat (e.g. windowFixedWidthMinor), there is no guarantee that
++            // AppCompat.DialogWhenLarge is actually defined by AppCompat and not based on
++            // system DialogWhenLarge theme.
++            // Note that we don't care about the return values, because onMeasure() handles null
++            // constraints (and they will be null when the device is not considered "large").
++            getContext().getResources().getValue(
++                    R.dimen.dialog_fixed_width_minor, mFixedWidthMinor, true);
++            getContext().getResources().getValue(
++                    R.dimen.dialog_fixed_width_major, mFixedWidthMajor, true);
++            getContext().getResources().getValue(
++                    R.dimen.dialog_fixed_height_minor, mFixedHeightMinor, true);
++            getContext().getResources().getValue(
++                    R.dimen.dialog_fixed_height_major, mFixedHeightMajor, true);
++        }
++
++        @Override
++        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
++            final DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
++            final boolean isPortrait = metrics.widthPixels < metrics.heightPixels;
++
++            // Constraint handling is adapted from
++            // sdk/sources/android-25/android/support/v7/widget/ContentFrameLayout.java.
++            final int widthMode = MeasureSpec.getMode(widthMeasureSpec);
++            assert widthMode == MeasureSpec.AT_MOST;
++            {
++                final TypedValue tvw = isPortrait ? mFixedWidthMinor : mFixedWidthMajor;
++                int widthSize = MeasureSpec.getSize(widthMeasureSpec);
++                if (tvw.type != TypedValue.TYPE_NULL) {
++                    assert tvw.type == TypedValue.TYPE_FRACTION;
++                    int width = (int) tvw.getFraction(metrics.widthPixels, metrics.widthPixels);
++                    widthSize = Math.min(width, widthSize);
++                }
++                // This either sets the width calculated from the constraints, or simply
++                // takes all of the available space (as if MATCH_PARENT was specified).
++                // The behavior is similar to how DialogWhenLarge windows are sized - they
++                // are either sized by the constraints, or are full screen, but are never
++                // sized based on the content size.
++                widthMeasureSpec = MeasureSpec.makeMeasureSpec(widthSize, MeasureSpec.EXACTLY);
++            }
++
++            // This is similar to the above block that calculates width.
++            final int heightMode = MeasureSpec.getMode(heightMeasureSpec);
++            assert heightMode == MeasureSpec.AT_MOST;
++            {
++                final TypedValue tvh = isPortrait ? mFixedHeightMajor : mFixedHeightMinor;
++                int heightSize = MeasureSpec.getSize(heightMeasureSpec);
++                if (tvh.type != TypedValue.TYPE_NULL) {
++                    assert tvh.type == TypedValue.TYPE_FRACTION;
++                    int height = (int) tvh.getFraction(metrics.heightPixels, metrics.heightPixels);
++                    heightSize = Math.min(height, heightSize);
++                }
++                heightMeasureSpec = MeasureSpec.makeMeasureSpec(heightSize, MeasureSpec.EXACTLY);
++            }
++
++            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
++        }
++    }
++}
+diff --git a/chrome/android/java_sources.gni b/chrome/android/java_sources.gni
+index d373d90..ef12785 100644
+--- a/chrome/android/java_sources.gni
++++ b/chrome/android/java_sources.gni
+@@ -427,6 +427,7 @@
+   "java/src/org/chromium/chrome/browser/firstrun/FirstRunView.java",
+   "java/src/org/chromium/chrome/browser/firstrun/FirstRunViewPager.java",
+   "java/src/org/chromium/chrome/browser/firstrun/ForcedSigninProcessor.java",
++  "java/src/org/chromium/chrome/browser/firstrun/TabbedModeFirstRunActivity.java",
+   "java/src/org/chromium/chrome/browser/firstrun/ToSAckedReceiver.java",
+   "java/src/org/chromium/chrome/browser/firstrun/ToSAndUMAFirstRunFragment.java",
+   "java/src/org/chromium/chrome/browser/fullscreen/BrowserStateBrowserControlsVisibilityDelegate.java",

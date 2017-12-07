@@ -1,0 +1,474 @@
+--- a/net/nqe/network_quality_estimator_params.cc
++++ b/net/nqe/network_quality_estimator_params.cc
+@@ -426,7 +426,7 @@
+       hanging_request_duration_http_rtt_multiplier_(GetValueForVariationParam(
+           params_,
+           "hanging_request_duration_http_rtt_multiplier",
+-          -1)),
++          5)),
+       hanging_request_min_duration_(base::TimeDelta::FromMilliseconds(
+           GetValueForVariationParam(params_,
+                                     "hanging_request_min_duration_msec",
+--- a/DEPS
++++ b/DEPS
+@@ -114,7 +114,7 @@
+     'condition':
+       'checkout_ios',
+     'url':
+-      (Var("chromium_git")) + '/external/github.com/material-components/material-components-ios.git@f754315c1986ab41de55e038420e5154612660ea'
++      (Var("chromium_git")) + '/external/github.com/material-components/material-components-ios.git@97c6738501082716b216db1bd880565815758c1b'
+   },
+   'src/ios/third_party/material_font_disk_loader_ios/src': {
+     'condition':
+diff --git a/ios/third_party/material_components_ios/BUILD.gn b/ios/third_party/material_components_ios/BUILD.gn
+index 37035ed..98aa5f6 100644
+--- a/ios/third_party/material_components_ios/BUILD.gn
++++ b/ios/third_party/material_components_ios/BUILD.gn
+@@ -18,6 +18,7 @@
+     "src/components/FlexibleHeader/src",
+     "src/components/HeaderStackView/src",
+     "src/components/Ink/src",
++    "src/components/private/UIMetrics/src",
+     "src/components/NavigationBar/src",
+     "src/components/OverlayWindow/src",
+     "src/components/Palettes/src",
+@@ -236,6 +237,9 @@
+     "src/components/private/ThumbTrack/src/MDCThumbView.h",
+     "src/components/private/ThumbTrack/src/MDCThumbView.m",
+     "src/components/private/ThumbTrack/src/MaterialThumbTrack.h",
++    "src/components/private/UIMetrics/src/MDCLayoutMetrics.h",
++    "src/components/private/UIMetrics/src/MDCLayoutMetrics.m",
++    "src/components/private/UIMetrics/src/MaterialUIMetrics.h",
+   ]
+   include_dirs = [
+     "src/components/ActivityIndicator/src",
+--- a/third_party/WebKit/Source/core/paint/PaintLayerClipper.cpp
++++ b/third_party/WebKit/Source/core/paint/PaintLayerClipper.cpp
+@@ -321,10 +321,13 @@
+     ClipRect& foreground_rect,
+     const LayoutPoint* offset_from_root) const {
+   if (use_geometry_mapper_) {
+-    DCHECK(fragment_data);
++    auto* first_fragment = layer_.GetLayoutObject().FirstFragment();
++    auto* local_borderbox =
++        first_fragment ? first_fragment->LocalBorderBoxProperties() : nullptr;
++    DCHECK(first_fragment && local_borderbox);
+     // TODO(chrishtr): find the root cause of not having a fragment and fix
+     // it.
+-    if (!fragment_data)
++    if (!first_fragment || !local_borderbox)
+       return;
+     CalculateRectsWithGeometryMapper(context, *fragment_data, paint_dirty_rect,
+                                      layer_bounds, background_rect,
+@@ -558,6 +561,14 @@
+     const ClipRectsContext& context,
+     ClipRect& output) const {
+   if (use_geometry_mapper_) {
++    auto* first_fragment = layer_.GetLayoutObject().FirstFragment();
++    auto* local_borderbox =
++        first_fragment ? first_fragment->LocalBorderBoxProperties() : nullptr;
++    DCHECK(first_fragment && local_borderbox);
++    // TODO(chrishtr): find the root cause of not having a fragment and fix
++    // it.
++    if (!first_fragment || !local_borderbox)
++      return;
+     CalculateBackgroundClipRectWithGeometryMapper(
+         context, *layer_.GetLayoutObject().FirstFragment(), output);
+     return;
+--- a/ui/webui/resources/cr_elements/chromeos/cr_picture/compiled_resources2.gyp
++++ b/ui/webui/resources/cr_elements/chromeos/cr_picture/compiled_resources2.gyp
+@@ -21,6 +21,7 @@
+     {
+       'dependencies': [
+         'cr_camera',
++        'cr_png_behavior',
+         'cr_picture_types',
+       ],
+       'target_name': 'cr_picture_pane',
+diff --git a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.html b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.html
+index 0ecdb58..f9438ea 100644
+--- a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.html
++++ b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.html
+@@ -10,6 +10,11 @@
+     <!-- Note: Do not include cr-shared-style, we use different
+          paper-icon-button-light styling -->
+     <style>
++      :host {
++        --cr-camera-hidden-frame-size: 406px;
++        --cr-camera-preview-frame-size: 280px;
++      }
++
+       #perspectiveBox {
+         height: var(--cr-camera-image-size, 228px);
+         margin: auto;
+@@ -28,29 +33,41 @@
+       }
+ 
+       #userImageStreamCrop::after {
+-        -webkit-mask-image: radial-gradient(transparent 140px, black 140px);
+-        background-color: rgb(214, 214, 214);
++        border: 100px solid rgba(214, 214, 214, 0.34);
++        border-radius: 100%;
+         content: '';
+         display: block;
+-        height: 100%;
+-        opacity: 0.34;
+-        transform: translateZ(0);
+-        width: 100%;
++        height: var(--cr-camera-hidden-frame-size);
++        margin: 50% 50%;
++        transform: translateZ(0) translateX(-50%) translateY(-50%);
++        transition: width 100ms, height 100ms;
++        transition-timing-function: ease-in;
++        width: var(--cr-camera-hidden-frame-size);
+       }
+ 
+-      @-webkit-keyframes pulse {
+-        0% { opacity: 0; }
+-        50% { opacity: 1; }
+-        100% { opacity: 0; }
++      #userImageStreamCrop.preview::after {
++        height: var(--cr-camera-preview-frame-size);
++        transition-timing-function: ease-out;
++        width: var(--cr-camera-preview-frame-size);
+       }
+ 
+-      #userImageStreamCrop.capture::after {
+-        -webkit-mask-image: none;
+-        animation: pulse linear 100ms normal forwards;
++      :host([!videomode]) #userImageStreamCrop.capture::after {
++        background-color: white;
++        transition: background-color 50ms ease-in 100ms;
++      }
++
++      @-webkit-keyframes flash {
++        0% { background-color: rgba(255, 255, 255, 0); }
++        33% { background-color: rgba(255, 255, 255, 0.67); }
++        100% { background-color: rgba(255, 255, 255, 0); }
+       }
+ 
+       :host([videomode]) #userImageStreamCrop.capture::after {
+-        animation: pulse linear 50ms 20;
++        animation-delay: 100ms;
++        animation-duration: 100ms;
++        animation-iteration-count: 10;
++        animation-name: flash;
++        animation-timing-function: ease-out;
+       }
+ 
+       paper-spinner {
+diff --git a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.js b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.js
+index 9503bb4..2afeb9b 100644
+--- a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.js
++++ b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_camera.js
+@@ -70,6 +70,7 @@
+   /** @override */
+   attached: function() {
+     this.$.cameraVideo.addEventListener('canplay', function() {
++      this.$.userImageStreamCrop.classList.add('preview');
+       this.cameraOnline_ = true;
+     }.bind(this));
+     this.startCamera();
+@@ -106,17 +107,19 @@
+ 
+     /** Start capturing frames at an interval. */
+     var capturedFrames = [];
++    this.$.userImageStreamCrop.classList.remove('preview');
+     this.$.userImageStreamCrop.classList.add('capture');
+     var interval = setInterval(() => {
+-      capturedFrames.push(this.captureFrame_(this.$.cameraVideo, frames.pop()));
+-
+       /** Stop capturing frames when all allocated frames have been consumed. */
+-      if (!frames.length) {
+-        this.$.userImageStreamCrop.classList.remove('capture');
++      if (frames.length) {
++        capturedFrames.push(
++            this.captureFrame_(this.$.cameraVideo, frames.pop()));
++      } else {
+         clearInterval(interval);
+         this.fire(
+             'photo-taken',
+             {photoDataUrl: this.convertFramesToPng_(capturedFrames)});
++        this.$.userImageStreamCrop.classList.remove('capture');
+       }
+     }, CAPTURE_INTERVAL_MS);
+   },
+@@ -146,6 +149,7 @@
+ 
+   /** Stops the camera stream capture if it's currently active. */
+   stopCamera: function() {
++    this.$.userImageStreamCrop.classList.remove('preview');
+     this.cameraOnline_ = false;
+     this.$.cameraVideo.src = '';
+     if (this.cameraStream_)
+diff --git a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.html b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.html
+index 551b441..9f54cc2 100644
+--- a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.html
++++ b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.html
+@@ -4,6 +4,7 @@
+ <link rel="import" href="chrome://resources/polymer/v1_0/paper-icon-button/paper-icon-button-light.html">
+ <link rel="import" href="cr_camera.html">
+ <link rel="import" href="cr_picture_types.html">
++<link rel="import" href="cr_png_behavior.html">
+ 
+ <dom-module id="cr-picture-pane">
+   <template>
+@@ -21,6 +22,7 @@
+       }
+ 
+       img {
++        background-size: 100% 100%;
+         border-top-left-radius: 2px;
+         border-top-right-radius: 2px;
+         display: block;
+@@ -60,19 +62,16 @@
+         border-radius: 50%;
+       }
+     </style>
+-    <template is="dom-if"
+-        if="[[showImagePreview_(cameraActive_, imageSrc)]]">
+-      <div id="preview">
+-        <img alt="[[previewAltText]]" src="[[getImgSrc_(imageUrl)]]"
+-            data-show-discard$="[[showDiscard_(imageType)]]">
+-        <div id="discard" hidden="[[!showDiscard_(imageType)]]">
+-          <button is="paper-icon-button-light" id="discardImage"
+-              class="icon-delete-white" title="[[discardImageLabel]]"
+-              on-tap="onTapDiscardImage_">
+-          </button>
+-        </div>
++    <div id="preview" hidden="[[!showImagePreview_(cameraActive_, imageSrc)]]">
++      <img id="image" alt="[[previewAltText]]" src="[[getImgSrc_(imageUrl)]]"
++          data-show-discard$="[[showDiscard_(imageType)]]">
++      <div id="discard" hidden="[[!showDiscard_(imageType)]]">
++        <button is="paper-icon-button-light" id="discardImage"
++            class="icon-delete-white" title="[[discardImageLabel]]"
++            on-tap="onTapDiscardImage_">
++        </button>
+       </div>
+-    </template>
++    </div>
+     <template is="dom-if" if="[[cameraActive_]]">
+       <cr-camera id="camera"
+           take-photo-label="[[takePhotoLabel]]"
+diff --git a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.js b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.js
+index cdfa872..96603fe 100644
+--- a/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.js
++++ b/ui/webui/resources/cr_elements/chromeos/cr_picture/cr_picture_pane.js
+@@ -11,7 +11,10 @@
+ Polymer({
+   is: 'cr-picture-pane',
+ 
++  behaviors: [CrPngBehavior],
++
+   properties: {
++
+     /** Whether the camera is present / available */
+     cameraPresent: Boolean,
+ 
+@@ -96,14 +99,19 @@
+      * Data URLs for PNG images can be large. Create an object URL to avoid
+      * URL length limits.
+      */
++    var image = /** @type {!HTMLImageElement} */ (this.$$('#image'));
+     if (this.imageSrc.startsWith('data:image/png')) {
+       var byteString = atob(this.imageSrc.split(',')[1]);
+       var bytes = new Uint8Array(byteString.length);
+       for (var i = 0; i < byteString.length; i++)
+         bytes[i] = byteString.charCodeAt(i);
+       var blob = new Blob([bytes], {'type': 'image/png'});
++      // Use first frame as placeholder while rest of image loads.
++      image.style.backgroundImage = 'url(' +
++          CrPngBehavior.convertImageSequenceToPng([this.imageSrc]) + ')';
+       this.imageUrl = URL.createObjectURL(blob);
+     } else {
++      image.style.backgroundImage = 'none';
+       this.imageUrl = this.imageSrc;
+     }
+   },
+--- a/chrome/browser/ui/webui/chromeos/user_image_source.cc
++++ b/chrome/browser/ui/webui/chromeos/user_image_source.cc
+@@ -131,8 +131,16 @@
+ 
+   if (user) {
+     if (user->has_image_bytes()) {
+-      return GetUserImageFrame(user->image_bytes(), user->image_format(),
+-                               frame);
++      if (user->image_format() == user_manager::UserImage::FORMAT_PNG) {
++        return GetUserImageFrame(user->image_bytes(), user->image_format(),
++                                 frame);
++      } else {
++        scoped_refptr<base::RefCountedBytes> data(new base::RefCountedBytes);
++        gfx::PNGCodec::EncodeBGRASkBitmap(*user->GetImage().bitmap(),
++                                          false /* discard transparency */,
++                                          &data->data());
++        return data;
++      }
+     }
+     if (user->image_is_stub()) {
+       return LoadUserImageFrameForScaleFactor(IDR_LOGIN_DEFAULT_USER, frame,
+--- a/chrome/browser/resources/chromeos/user_images_grid.js
++++ b/chrome/browser/resources/chromeos/user_images_grid.js
+@@ -462,9 +462,10 @@
+         this.cameraTitle_ = this.capturedImageTitle_;
+         this.cameraImage = previewImg.src;
+       }.bind(this));
+-      previewImg.src = canvas.toDataURL('image/png');
++      var imageUrl = this.flipFrame_(canvas);
++      previewImg.src = imageUrl;
+       var e = new Event('phototaken');
+-      e.dataURL = this.flipFrame_(canvas);
++      e.dataURL = imageUrl;
+       this.dispatchEvent(e);
+       return true;
+     },
+--- a/net/dns/dns_transaction.cc
++++ b/net/dns/dns_transaction.cc
+@@ -670,8 +670,13 @@
+   }
+ 
+   void DoCallback(AttemptResult result) {
+-    DCHECK(!callback_.is_null());
+     DCHECK_NE(ERR_IO_PENDING, result.rv);
++
++    // TODO(mgersh): consider changing back to a DCHECK once
++    // https://crbug.com/779589 is fixed.
++    if (callback_.is_null())
++      return;
++
+     const DnsResponse* response = result.attempt ?
+         result.attempt->GetResponse() : NULL;
+     CHECK(result.rv != OK || response != NULL);
+@@ -883,8 +888,12 @@
+           session_->RecordServerSuccess(result.attempt->server_index());
+           net_log_.EndEventWithNetErrorCode(
+               NetLogEventType::DNS_TRANSACTION_QUERY, result.rv);
+-          // Try next suffix.
+-          qnames_.pop_front();
++          // Try next suffix. Check that qnames_ isn't already empty first,
++          // which can happen when there are two attempts running at once.
++          // TODO(mgersh): remove this workaround for https://crbug.com/774846
++          // when https://crbug.com/779589 is fixed.
++          if (!qnames_.empty())
++            qnames_.pop_front();
+           if (qnames_.empty()) {
+             return AttemptResult(ERR_NAME_NOT_RESOLVED, NULL);
+           } else {
+diff --git a/net/dns/dns_transaction_unittest.cc b/net/dns/dns_transaction_unittest.cc
+index 886d17f..53328d7 100644
+--- a/net/dns/dns_transaction_unittest.cc
++++ b/net/dns/dns_transaction_unittest.cc
+@@ -643,6 +643,26 @@
+   EXPECT_TRUE(helper0.RunUntilDone(transaction_factory_.get()));
+ }
+ 
++TEST_F(DnsTransactionTest, MismatchedResponseNxdomain) {
++  config_.attempts = 2;
++  config_.timeout = TestTimeouts::tiny_timeout();
++  ConfigureFactory();
++
++  // First attempt receives mismatched response followed by valid NXDOMAIN
++  // response.
++  // Second attempt receives valid NXDOMAIN response.
++  std::unique_ptr<DnsSocketData> data(
++      new DnsSocketData(0 /* id */, kT0HostName, kT0Qtype, SYNCHRONOUS, false));
++  data->AddResponseData(kT1ResponseDatagram, arraysize(kT1ResponseDatagram),
++                        SYNCHRONOUS);
++  data->AddRcode(dns_protocol::kRcodeNXDOMAIN, ASYNC);
++  AddSocketData(std::move(data));
++  AddSyncQueryAndRcode(kT0HostName, kT0Qtype, dns_protocol::kRcodeNXDOMAIN);
++
++  TransactionHelper helper0(kT0HostName, kT0Qtype, ERR_NAME_NOT_RESOLVED);
++  EXPECT_TRUE(helper0.Run(transaction_factory_.get()));
++}
++
+ TEST_F(DnsTransactionTest, ServerFail) {
+   AddAsyncQueryAndRcode(kT0HostName, kT0Qtype, dns_protocol::kRcodeSERVFAIL);
+ 
+--- a/chrome/browser/component_updater/pnacl_component_installer.cc
++++ b/chrome/browser/component_updater/pnacl_component_installer.cc
+@@ -69,10 +69,9 @@
+ // If we don't have Pnacl installed, this is the version we claim.
+ const char kMinPnaclVersion[] = "0.46.0.4";
+ 
+-// Initially say that we do not need OnDemand updates. This should be
+-// updated by CheckVersionCompatiblity(), before doing any URLRequests
+-// that depend on PNaCl.
+-volatile base::subtle::Atomic32 needs_on_demand_update = 0;
++// Initially say that we do need OnDemand updates. If there is a version of
++// PNaCl on disk, this will be updated by CheckVersionCompatiblity().
++volatile base::subtle::Atomic32 needs_on_demand_update = 1;
+ 
+ void CheckVersionCompatiblity(const base::Version& current_version) {
+   // Using NoBarrier, since needs_on_demand_update is standalone and does
+--- a/storage/browser/blob/blob_storage_context.cc
++++ b/storage/browser/blob/blob_storage_context.cc
+@@ -168,7 +168,10 @@
+       }
+ 
+       // Validate our reference has good offset & length.
+-      if (input_element.offset() + length > ref_entry->total_size()) {
++      uint64_t end_byte;
++      if (!base::CheckAdd(input_element.offset(), length)
++               .AssignIfValid(&end_byte) ||
++          end_byte > ref_entry->total_size()) {
+         status = BlobStatus::ERR_INVALID_CONSTRUCTION_ARGUMENTS;
+         return;
+       }
+diff --git a/storage/browser/blob/blob_storage_context_unittest.cc b/storage/browser/blob/blob_storage_context_unittest.cc
+index a0b699f..8d11c70 100644
+--- a/storage/browser/blob/blob_storage_context_unittest.cc
++++ b/storage/browser/blob/blob_storage_context_unittest.cc
+@@ -889,6 +889,24 @@
+   EXPECT_EQ(0lu, context_->memory_controller().disk_usage());
+ }
+ 
++TEST_F(BlobStorageContextTest, NegativeSlice) {
++  const std::string kId1("id1");
++  const std::string kId2("id2");
++
++  std::unique_ptr<BlobDataHandle> handle = SetupBasicBlob(kId1);
++
++  EXPECT_EQ(1lu, context_->memory_controller().memory_usage());
++
++  BlobDataBuilder builder(kId2);
++  builder.AppendBlob(kId1, static_cast<uint64_t>(-10), 11);
++  std::unique_ptr<BlobDataHandle> handle2 = context_->BuildBlob(
++      builder, BlobStorageContext::TransportAllowedCallback());
++
++  EXPECT_TRUE(handle2->IsBroken());
++  EXPECT_EQ(BlobStatus::ERR_INVALID_CONSTRUCTION_ARGUMENTS,
++            handle2->GetBlobStatus());
++}
++
+ // TODO(michaeln): tests for the deprecated url stuff
+ 
+ }  // namespace storage
+--- a/base/files/file_posix.cc
++++ b/base/files/file_posix.cc
+@@ -410,6 +410,7 @@
+       return FILE_ERROR_IO;
+     case ENOENT:
+       return FILE_ERROR_NOT_FOUND;
++    case ENFILE:  // fallthrough
+     case EMFILE:
+       return FILE_ERROR_TOO_MANY_OPENED;
+     case ENOMEM:
+--- a/third_party/leveldatabase/env_chromium.cc
++++ b/third_party/leveldatabase/env_chromium.cc
+@@ -139,7 +139,6 @@
+   return return_value;
+ #else
+   const std::string dir_string = dir_param.AsUTF8Unsafe();
+-  errno = 0;
+   DIR* dir = opendir(dir_string.c_str());
+   int saved_errno;
+   if (!dir) {
+@@ -149,7 +148,7 @@
+     return base::File::OSErrorToFileError(saved_errno);
+   }
+   struct dirent* dent;
+-  while ((dent = readdir(dir))) {
++  while ((errno = 0, dent = readdir(dir)) != nullptr) {
+     if (strcmp(dent->d_name, ".") == 0 || strcmp(dent->d_name, "..") == 0)
+       continue;
+     result->push_back(FilePath::FromUTF8Unsafe(dent->d_name));

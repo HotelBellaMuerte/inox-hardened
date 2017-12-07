@@ -1,0 +1,521 @@
+diff --git a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-big-expected.png b/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-big-expected.png
+deleted file mode 100644
+index 831f835..0000000
+--- a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-big-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-small-expected.png b/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-small-expected.png
+deleted file mode 100644
+index 126622f..0000000
+--- a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-line-height-too-small-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-rounding-expected.png b/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-rounding-expected.png
+deleted file mode 100644
+index 0feb2ac..0000000
+--- a/third_party/WebKit/LayoutTests/platform/linux/fast/text/selection-rect-rounding-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/linux/fast/text/whitespace/select-new-line-with-line-break-normal-expected.png b/third_party/WebKit/LayoutTests/platform/linux/fast/text/whitespace/select-new-line-with-line-break-normal-expected.png
+deleted file mode 100644
+index 9b34450..0000000
+--- a/third_party/WebKit/LayoutTests/platform/linux/fast/text/whitespace/select-new-line-with-line-break-normal-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-23-expected.png
+index 5d822aa..99ee921 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-24-expected.png
+index 68476b4..ff7d676 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-68-expected.png
+index 68476b4..ff7d676 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-69-expected.png
+index 5d822aa..99ee921 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/html/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-23-expected.png
+index 5d822aa..99ee921 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-24-expected.png
+index 68476b4..ff7d676 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-68-expected.png
+index 68476b4..ff7d676 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-69-expected.png
+index 5d822aa..99ee921 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xhtml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-23-expected.png
+index ba7d76f..f8b4544 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-24-expected.png
+index 7569e51..7144472 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-68-expected.png
+index 7569e51..7144472 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-69-expected.png
+index ba7d76f..f8b4544 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/css3/selectors3/xml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/001-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/001-expected.png
+index 079b35f..30caeeb 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/001-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/001-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-default-title-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-default-title-expected.png
+index b319c13..7a90c74 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-default-title-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-default-title-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-style-color-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-style-color-expected.png
+index 2bac08f..5b7cb44 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-style-color-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/button-style-color-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+index 8a0f704..d833c1f 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+index c08ab2e..e019d04 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/control-clip-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/control-clip-expected.png
+index 3113d4e..715e356 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/control-clip-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/control-clip-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/input-first-letter-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/input-first-letter-expected.png
+index 1c1c18a..219ad8f 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/input-first-letter-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/input-first-letter-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/select/select-baseline-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/select/select-baseline-expected.png
+index 10da7a8..2390363 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/select/select-baseline-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/select/select-baseline-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/submit/submit-appearance-basic-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/submit/submit-appearance-basic-expected.png
+index bc296f5..c1ce774 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/submit/submit-appearance-basic-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.10/fast/forms/submit/submit-appearance-basic-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-23-expected.png
+index 6c13a31..28d234c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-24-expected.png
+index d7a7a4a..13fff0d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-68-expected.png
+index d7a7a4a..13fff0d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-69-expected.png
+index 6c13a31..28d234c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/html/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-23-expected.png
+index 6c13a31..28d234c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-24-expected.png
+index d7a7a4a..13fff0d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-68-expected.png
+index d7a7a4a..13fff0d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-69-expected.png
+index 6c13a31..28d234c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xhtml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-23-expected.png
+index 8cbb7bc..c53c0bc 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-24-expected.png
+index 7148aa9..d78982d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-68-expected.png
+index 7148aa9..d78982d 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-69-expected.png
+index 8cbb7bc..c53c0bc 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/css3/selectors3/xml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/001-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/001-expected.png
+new file mode 100644
+index 0000000..b615e08
+--- /dev/null
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/001-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-default-title-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-default-title-expected.png
+index 854ee35..e13ee11 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-default-title-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-default-title-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-style-color-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-style-color-expected.png
+index 0dcbc53..a6b007a 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-style-color-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/button-style-color-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+index 610bbff..fead3d9 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+index 6b1e559..29787c7 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/control-clip-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/control-clip-expected.png
+index 14cd866..a78a9c3 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/control-clip-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/control-clip-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/input-first-letter-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/input-first-letter-expected.png
+index 9ddfd36..adda44e 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/input-first-letter-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/input-first-letter-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/select/select-baseline-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/select/select-baseline-expected.png
+index fc884d6..4c5d1c9 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/select/select-baseline-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/select/select-baseline-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/submit/submit-appearance-basic-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/submit/submit-appearance-basic-expected.png
+index 3dcdf3b..d89c6b1 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/submit/submit-appearance-basic-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/fast/forms/submit/submit-appearance-basic-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/media/video-zoom-controls-expected.png b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/media/video-zoom-controls-expected.png
+index d144fd2..f4549b6 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac-mac10.11/media/video-zoom-controls-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac-mac10.11/media/video-zoom-controls-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-23-expected.png
+deleted file mode 100644
+index 6c13a31..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-23-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-24-expected.png
+deleted file mode 100644
+index d7a7a4a..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-24-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-68-expected.png
+deleted file mode 100644
+index d7a7a4a..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-68-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-69-expected.png
+deleted file mode 100644
+index 6c13a31..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/html/css3-modsel-69-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-23-expected.png
+deleted file mode 100644
+index 6c13a31..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-23-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-24-expected.png
+deleted file mode 100644
+index d7a7a4a..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-24-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-68-expected.png
+deleted file mode 100644
+index d7a7a4a..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-68-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-69-expected.png
+deleted file mode 100644
+index 6c13a31..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xhtml/css3-modsel-69-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-23-expected.png
+deleted file mode 100644
+index 8cbb7bc..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-23-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-24-expected.png
+deleted file mode 100644
+index 7148aa9..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-24-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-68-expected.png
+deleted file mode 100644
+index 7148aa9..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-68-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-69-expected.png
+deleted file mode 100644
+index 8cbb7bc..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/css3/selectors3/xml/css3-modsel-69-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-default-title-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-default-title-expected.png
+deleted file mode 100644
+index 854ee35..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-default-title-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-style-color-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-style-color-expected.png
+deleted file mode 100644
+index 0dcbc53..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/button-style-color-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+deleted file mode 100644
+index 610bbff..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+deleted file mode 100644
+index 6b1e559..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/control-clip-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/control-clip-expected.png
+deleted file mode 100644
+index 14cd866..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/control-clip-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/input-first-letter-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/input-first-letter-expected.png
+deleted file mode 100644
+index 9ddfd36..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/input-first-letter-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/select/select-baseline-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/select/select-baseline-expected.png
+deleted file mode 100644
+index fc884d6..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/select/select-baseline-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/submit/submit-appearance-basic-expected.png b/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/submit/submit-appearance-basic-expected.png
+deleted file mode 100644
+index 3dcdf3b..0000000
+--- a/third_party/WebKit/LayoutTests/platform/mac-retina/fast/forms/submit/submit-appearance-basic-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-23-expected.png
+index da5c52c..c3f0f46 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-24-expected.png
+index 97cb094..f341d1b 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-68-expected.png
+index 97cb094..f341d1b 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-69-expected.png
+index da5c52c..c3f0f46 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/html/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-23-expected.png
+index da5c52c..c3f0f46 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-24-expected.png
+index 97cb094..f341d1b 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-68-expected.png
+index 97cb094..f341d1b 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-69-expected.png
+index da5c52c..c3f0f46 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xhtml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-23-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-23-expected.png
+index 521fcc5..825f7b52 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-23-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-23-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-24-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-24-expected.png
+index ba7131d..0baca6c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-24-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-24-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-68-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-68-expected.png
+index ba7131d..0baca6c 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-68-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-68-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-69-expected.png b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-69-expected.png
+index 521fcc5..825f7b52 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-69-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/css3/selectors3/xml/css3-modsel-69-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/box-sizing/percentage-height-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/box-sizing/percentage-height-expected.png
+index bc87ef0..caa8b40 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/box-sizing/percentage-height-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/box-sizing/percentage-height-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-default-title-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-default-title-expected.png
+index a1afcc4..4bd6676 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-default-title-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-default-title-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-style-color-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-style-color-expected.png
+index b8f2ff0..0f79210 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-style-color-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/button-style-color-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+index 2a390b4..9215274 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom125-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+index b40b78b3..c94ccb6 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/color/color-suggestion-picker-appearance-zoom200-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/control-clip-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/control-clip-expected.png
+index 5094146..58e9fbf 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/control-clip-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/control-clip-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/input-first-letter-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/input-first-letter-expected.png
+index 9516a09..47da8d7 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/input-first-letter-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/input-first-letter-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/select/select-baseline-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/select/select-baseline-expected.png
+index 2c8bbe6..81f97f6 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/select/select-baseline-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/select/select-baseline-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/submit/submit-appearance-basic-expected.png b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/submit/submit-appearance-basic-expected.png
+index a9c2253..ddcdf40 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/fast/forms/submit/submit-appearance-basic-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/fast/forms/submit/submit-appearance-basic-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-dark-rendering-expected.png b/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-dark-rendering-expected.png
+index 0e8c2bd..65da69a 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-dark-rendering-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-dark-rendering-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-light-rendering-expected.png b/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-light-rendering-expected.png
+index 360ea7a..23d7968 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-light-rendering-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/media/controls/video-overlay-cast-light-rendering-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-dark-rendering-expected.png b/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-dark-rendering-expected.png
+index 0e8c2bd..65da69a 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-dark-rendering-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-dark-rendering-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-light-rendering-expected.png b/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-light-rendering-expected.png
+index 360ea7a..23d7968 100644
+--- a/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-light-rendering-expected.png
++++ b/third_party/WebKit/LayoutTests/platform/mac/virtual/new-remote-playback-pipeline/media/controls/video-overlay-cast-light-rendering-expected.png
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-big-expected.png b/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-big-expected.png
+deleted file mode 100644
+index 58e4daf..0000000
+--- a/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-big-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-small-expected.png b/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-small-expected.png
+deleted file mode 100644
+index eadf952..0000000
+--- a/third_party/WebKit/LayoutTests/platform/win/fast/text/selection-rect-line-height-too-small-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-big-expected.png b/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-big-expected.png
+deleted file mode 100644
+index 19c1967..0000000
+--- a/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-big-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-small-expected.png b/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-small-expected.png
+deleted file mode 100644
+index 71a0fb8..0000000
+--- a/third_party/WebKit/LayoutTests/platform/win7/fast/text/selection-rect-line-height-too-small-expected.png
++++ /dev/null
+Binary files differ
+diff --git a/third_party/WebKit/Source/core/css/themeMac.css b/third_party/WebKit/Source/core/css/themeMac.css
+index 1e2df8e..a99fce9 100644
+--- a/third_party/WebKit/Source/core/css/themeMac.css
++++ b/third_party/WebKit/Source/core/css/themeMac.css
+@@ -25,7 +25,6 @@
+ button {
+     /* The color is similar to the border of OSX 10.12 buttons. */
+     border-color: #d8d8d8 #d1d1d1 #bababa;
+-    border-radius: 4px;
+     border-style: solid;
+     border-width: 1px;
+     /* Fixed padding provided by ThemeMac::ControlPadding() - 1px for broder */

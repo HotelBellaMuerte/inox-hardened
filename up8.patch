@@ -1,0 +1,1333 @@
+--- a/ui/views/controls/tree/tree_view.cc
++++ b/ui/views/controls/tree/tree_view.cc
+@@ -741,7 +741,7 @@
+ void TreeView::SchedulePaintForNode(InternalNode* node) {
+   if (!node)
+     return;  // Explicitly allow NULL to be passed in.
+-  SchedulePaintInRect(GetBoundsForNode(node));
++  SchedulePaintInRect(GetBackgroundBoundsForNode(node));
+ }
+ 
+ void TreeView::PaintRows(gfx::Canvas* canvas,
+--- a/content/browser/indexed_db/indexed_db_backing_store.cc
++++ b/content/browser/indexed_db/indexed_db_backing_store.cc
+@@ -1850,10 +1850,12 @@
+ 
+ bool IndexedDBBackingStore::RemoveBlobFile(int64_t database_id,
+                                            int64_t key) const {
++  FilePath path = GetBlobFileName(database_id, key);
+ #if DCHECK_IS_ON()
+   ++num_blob_files_deleted_;
++  DVLOG(1) << "Deleting blob " << key << " from IndexedDB database "
++           << database_id << " at path " << path.value();
+ #endif
+-  FilePath path = GetBlobFileName(database_id, key);
+   return base::DeleteFile(path, false);
+ }
+ 
+diff --git a/third_party/WebKit/Source/modules/indexeddb/IDBRequest.cpp b/third_party/WebKit/Source/modules/indexeddb/IDBRequest.cpp
+index ea76b25..159e0fe 100644
+--- a/third_party/WebKit/Source/modules/indexeddb/IDBRequest.cpp
++++ b/third_party/WebKit/Source/modules/indexeddb/IDBRequest.cpp
+@@ -259,7 +259,6 @@
+   cursor_key_ = key;
+   cursor_primary_key_ = primary_key;
+   cursor_value_ = std::move(value);
+-  AckReceivedBlobs(cursor_value_.get());
+ 
+   EnqueueResultInternal(IDBAny::Create(cursor));
+ }
+@@ -347,6 +346,7 @@
+                                 RefPtr<IDBValue>&& value) {
+   DCHECK(transit_blob_handles_.IsEmpty());
+   DCHECK(transaction_);
++  AckReceivedBlobs(value.get());
+   bool is_wrapped = IDBValueUnwrapper::IsWrapped(value.get());
+   if (!transaction_->HasQueuedResults() && !is_wrapped) {
+     return EnqueueResponse(std::move(backend), key, primary_key,
+@@ -361,6 +361,7 @@
+ void IDBRequest::HandleResponse(RefPtr<IDBValue>&& value) {
+   DCHECK(transit_blob_handles_.IsEmpty());
+   DCHECK(transaction_);
++  AckReceivedBlobs(value.get());
+   bool is_wrapped = IDBValueUnwrapper::IsWrapped(value.get());
+   if (!transaction_->HasQueuedResults() && !is_wrapped)
+     return EnqueueResponse(std::move(value));
+@@ -373,6 +374,7 @@
+ void IDBRequest::HandleResponse(const Vector<RefPtr<IDBValue>>& values) {
+   DCHECK(transit_blob_handles_.IsEmpty());
+   DCHECK(transaction_);
++  AckReceivedBlobs(values);
+   bool is_wrapped = IDBValueUnwrapper::IsWrapped(values);
+   if (!transaction_->HasQueuedResults() && !is_wrapped)
+     return EnqueueResponse(values);
+@@ -387,6 +389,7 @@
+                                 RefPtr<IDBValue>&& value) {
+   DCHECK(transit_blob_handles_.IsEmpty());
+   DCHECK(transaction_);
++  AckReceivedBlobs(value.get());
+   bool is_wrapped = IDBValueUnwrapper::IsWrapped(value.get());
+   if (!transaction_->HasQueuedResults() && !is_wrapped)
+     return EnqueueResponse(key, primary_key, std::move(value));
+@@ -486,7 +489,6 @@
+     return;
+   }
+ 
+-  AckReceivedBlobs(values);
+   EnqueueResultInternal(IDBAny::Create(values));
+   metrics_.RecordAndReset();
+ }
+@@ -511,8 +513,6 @@
+     return;
+   }
+ 
+-  AckReceivedBlobs(value.get());
+-
+   if (pending_cursor_) {
+     // Value should be null, signifying the end of the cursor's range.
+     DCHECK(value->IsNull());
+diff --git a/third_party/WebKit/Source/modules/indexeddb/IDBRequestLoader.cpp b/third_party/WebKit/Source/modules/indexeddb/IDBRequestLoader.cpp
+index a92470c..c7e7f0a 100644
+--- a/third_party/WebKit/Source/modules/indexeddb/IDBRequestLoader.cpp
++++ b/third_party/WebKit/Source/modules/indexeddb/IDBRequestLoader.cpp
+@@ -18,7 +18,6 @@
+                                    Vector<RefPtr<IDBValue>>* result_values)
+     : queue_item_(queue_item), values_(result_values) {
+   DCHECK(IDBValueUnwrapper::IsWrapped(*values_));
+-  loader_ = FileReaderLoader::Create(FileReaderLoader::kReadByClient, this);
+ }
+ 
+ IDBRequestLoader::~IDBRequestLoader() {
+@@ -48,7 +47,8 @@
+   DCHECK(file_reader_loading_);
+   file_reader_loading_ = false;
+ #endif  // DCHECK_IS_ON()
+-  loader_->Cancel();
++  if (loader_)
++    loader_->Cancel();
+ }
+ 
+ void IDBRequestLoader::StartNextValue() {
+@@ -77,6 +77,7 @@
+   DCHECK(!file_reader_loading_);
+   file_reader_loading_ = true;
+ #endif  // DCHECK_IS_ON()
++  loader_ = FileReaderLoader::Create(FileReaderLoader::kReadByClient, this);
+   loader_->Start(context, unwrapper.WrapperBlobHandle());
+ }
+ 
+diff --git a/third_party/WebKit/Source/modules/indexeddb/IDBRequestTest.cpp b/third_party/WebKit/Source/modules/indexeddb/IDBRequestTest.cpp
+index 65683e2..f714b7e 100644
+--- a/third_party/WebKit/Source/modules/indexeddb/IDBRequestTest.cpp
++++ b/third_party/WebKit/Source/modules/indexeddb/IDBRequestTest.cpp
+@@ -164,6 +164,7 @@
+ TEST_F(IDBRequestTest, EventsAfterEarlyDeathStopWithQueuedResult) {
+   V8TestingScope scope;
+   std::unique_ptr<MockWebIDBDatabase> backend = MockWebIDBDatabase::Create();
++  EXPECT_CALL(*backend, AckReceivedBlobs(testing::_)).Times(1);
+   EXPECT_CALL(*backend, Close()).Times(1);
+   BuildTransaction(scope, std::move(backend));
+ 
+@@ -187,6 +188,7 @@
+ TEST_F(IDBRequestTest, EventsAfterEarlyDeathStopWithTwoQueuedResults) {
+   V8TestingScope scope;
+   std::unique_ptr<MockWebIDBDatabase> backend = MockWebIDBDatabase::Create();
++  EXPECT_CALL(*backend, AckReceivedBlobs(testing::_)).Times(2);
+   EXPECT_CALL(*backend, Close()).Times(1);
+   BuildTransaction(scope, std::move(backend));
+ 
+diff --git a/third_party/WebKit/Source/modules/indexeddb/IDBTransactionTest.cpp b/third_party/WebKit/Source/modules/indexeddb/IDBTransactionTest.cpp
+index da7c941..06b760a 100644
+--- a/third_party/WebKit/Source/modules/indexeddb/IDBTransactionTest.cpp
++++ b/third_party/WebKit/Source/modules/indexeddb/IDBTransactionTest.cpp
+@@ -195,6 +195,7 @@
+ TEST_F(IDBTransactionTest, ContextDestroyedWithQueuedResult) {
+   V8TestingScope scope;
+   std::unique_ptr<MockWebIDBDatabase> backend = MockWebIDBDatabase::Create();
++  EXPECT_CALL(*backend, AckReceivedBlobs(testing::_)).Times(1);
+   EXPECT_CALL(*backend, Close()).Times(1);
+   BuildTransaction(scope, std::move(backend));
+ 
+@@ -231,6 +232,7 @@
+ TEST_F(IDBTransactionTest, ContextDestroyedWithTwoQueuedResults) {
+   V8TestingScope scope;
+   std::unique_ptr<MockWebIDBDatabase> backend = MockWebIDBDatabase::Create();
++  EXPECT_CALL(*backend, AckReceivedBlobs(testing::_)).Times(2);
+   EXPECT_CALL(*backend, Close()).Times(1);
+   BuildTransaction(scope, std::move(backend));
+ 
+@@ -274,6 +276,7 @@
+ 
+   V8TestingScope scope;
+   std::unique_ptr<MockWebIDBDatabase> backend = MockWebIDBDatabase::Create();
++  EXPECT_CALL(*backend, AckReceivedBlobs(testing::_)).Times(1);
+   EXPECT_CALL(*backend, Close()).Times(1);
+   BuildTransaction(scope, std::move(backend));
+ 
+--- a/content/browser/isolated_origin_browsertest.cc
++++ b/content/browser/isolated_origin_browsertest.cc
+@@ -47,6 +47,14 @@
+   WebContentsImpl* web_contents() const {
+     return static_cast<WebContentsImpl*>(shell()->web_contents());
+   }
++
++  void InjectAndClickLinkTo(GURL url) {
++    EXPECT_TRUE(ExecuteScript(web_contents(),
++                              "var link = document.createElement('a');"
++                              "link.href = '" + url.spec() + "';"
++                              "document.body.appendChild(link);"
++                              "link.click();"));
++  }
+ };
+ 
+ // Check that navigating a main frame from an non-isolated origin to an
+@@ -550,11 +558,7 @@
+   // that doesn't trigger this bug.
+   GURL foo_url(embedded_test_server()->GetURL("www.foo.com", "/title1.html"));
+   TestNavigationManager manager(shell()->web_contents(), foo_url);
+-  EXPECT_TRUE(ExecuteScript(shell()->web_contents(),
+-                            "var link = document.createElement('a');"
+-                            "link.href = '" + foo_url.spec() + "';"
+-                            "document.body.appendChild(link);"
+-                            "link.click();"));
++  InjectAndClickLinkTo(foo_url);
+   EXPECT_TRUE(manager.WaitForRequestStart());
+ 
+   // Before response is received, open a new, unrelated tab and navigate it to
+@@ -579,6 +583,62 @@
+             new_shell->web_contents()->GetMainFrame()->GetProcess());
+ }
+ 
++// Same as ProcessReuseWithLazilyAssignedSiteInstance above, but here the
++// navigation with a siteless SiteInstance is for an isolated origin, and the
++// unrelated tab loads an unisolated URL which reuses the siteless
++// SiteInstance's process.  Although the unisolated URL won't lock that process
++// to an origin (except when running with --site-per-process), it should still
++// mark it as used and cause the isolated origin to transfer when it receives a
++// response. See https://crbug.com/773809.
++IN_PROC_BROWSER_TEST_F(IsolatedOriginTest,
++                       ProcessReuseWithLazilyAssignedIsolatedSiteInstance) {
++  // This test requires PlzNavigate.
++  if (!IsBrowserSideNavigationEnabled())
++    return;
++
++  // Set the process limit to 1.
++  RenderProcessHost::SetMaxRendererProcessCount(1);
++
++  // Start from an about:blank page, where the SiteInstance will not have a
++  // site assigned, but will have an associated process.
++  EXPECT_TRUE(NavigateToURL(shell(), GURL(url::kAboutBlankURL)));
++  SiteInstanceImpl* starting_site_instance = static_cast<SiteInstanceImpl*>(
++      shell()->web_contents()->GetMainFrame()->GetSiteInstance());
++  EXPECT_FALSE(starting_site_instance->HasSite());
++  EXPECT_TRUE(starting_site_instance->HasProcess());
++  EXPECT_TRUE(web_contents()->GetMainFrame()->GetProcess()->IsUnused());
++
++  // Inject and click a link to an isolated origin.  Note that
++  // setting location.href won't work here, as that goes through OpenURL
++  // instead of OnBeginNavigation when starting from an about:blank page, and
++  // that doesn't trigger this bug.
++  GURL isolated_url(
++      embedded_test_server()->GetURL("isolated.foo.com", "/title2.html"));
++  TestNavigationManager manager(shell()->web_contents(), isolated_url);
++  InjectAndClickLinkTo(isolated_url);
++  EXPECT_TRUE(manager.WaitForRequestStart());
++
++  // Before response is received, open a new, unrelated tab and navigate it to
++  // an unisolated URL. This should reuse the first process, which is still
++  // considered unused at this point, and marks it as used.
++  Shell* new_shell = CreateBrowser();
++  GURL foo_url(embedded_test_server()->GetURL("www.foo.com", "/title1.html"));
++  EXPECT_TRUE(NavigateToURL(new_shell, foo_url));
++  EXPECT_EQ(web_contents()->GetMainFrame()->GetProcess(),
++            new_shell->web_contents()->GetMainFrame()->GetProcess());
++  EXPECT_FALSE(web_contents()->GetMainFrame()->GetProcess()->IsUnused());
++
++  // Wait for response in the first tab.  This should notice that the first
++  // process is no longer suitable for the isolated origin because it should
++  // already be marked as used, and transfer to another process.
++  manager.WaitForNavigationFinished();
++
++  // Ensure that the isolated origin did not share a process with the second
++  // tab.
++  EXPECT_NE(web_contents()->GetMainFrame()->GetProcess(),
++            new_shell->web_contents()->GetMainFrame()->GetProcess());
++}
++
+ // Verify that a navigation to an unisolated origin cannot reuse a process from
+ // a pending navigation to an isolated origin.  Similar to
+ // ProcessReuseWithResponseStartedFromIsolatedOrigin, but here the non-isolated
+@@ -623,6 +683,130 @@
+             new_shell->web_contents()->GetMainFrame()->GetProcess());
+ }
+ 
++// Verify that when a process has a pending SiteProcessCountTracker entry for
++// an isolated origin, and a navigation to a non-isolated origin reuses that
++// process, future isolated origin subframe navigations do not reuse that
++// process. See https://crbug.com/780661.
++IN_PROC_BROWSER_TEST_F(
++    IsolatedOriginTest,
++    IsolatedSubframeDoesNotReuseUnsuitableProcessWithPendingSiteEntry) {
++  // This test requires PlzNavigate.
++  if (!IsBrowserSideNavigationEnabled())
++    return;
++
++  // Set the process limit to 1.
++  RenderProcessHost::SetMaxRendererProcessCount(1);
++
++  // Start from an about:blank page, where the SiteInstance will not have a
++  // site assigned, but will have an associated process.
++  EXPECT_TRUE(NavigateToURL(shell(), GURL(url::kAboutBlankURL)));
++  EXPECT_TRUE(web_contents()->GetMainFrame()->GetProcess()->IsUnused());
++
++  // Inject and click a link to an isolated origin URL which never sends back a
++  // response.
++  GURL hung_isolated_url(
++      embedded_test_server()->GetURL("isolated.foo.com", "/hung"));
++  TestNavigationManager manager(web_contents(), hung_isolated_url);
++  InjectAndClickLinkTo(hung_isolated_url);
++
++  // Wait for the request and send it.  This will place
++  // isolated.foo.com on the list of pending sites for this tab's process.
++  EXPECT_TRUE(manager.WaitForRequestStart());
++  manager.ResumeNavigation();
++
++  // Open a new, unrelated tab and navigate it to an unisolated URL. This
++  // should reuse the first process, which is still considered unused at this
++  // point, and mark it as used.
++  Shell* new_shell = CreateBrowser();
++  GURL foo_url(
++      embedded_test_server()->GetURL("www.foo.com", "/page_with_iframe.html"));
++  EXPECT_TRUE(NavigateToURL(new_shell, foo_url));
++
++  // Navigate iframe on second tab to isolated.foo.com.  This should *not*
++  // reuse the first process, even though isolated.foo.com is still in its list
++  // of pending sites (from the hung navigation in the first tab).  That
++  // process is unsuitable because it now contains www.foo.com.
++  GURL isolated_url(
++      embedded_test_server()->GetURL("isolated.foo.com", "/title1.html"));
++  NavigateIframeToURL(new_shell->web_contents(), "test_iframe", isolated_url);
++
++  FrameTreeNode* root = static_cast<WebContentsImpl*>(new_shell->web_contents())
++                            ->GetFrameTree()
++                            ->root();
++  FrameTreeNode* child = root->child_at(0);
++  EXPECT_NE(child->current_frame_host()->GetProcess(),
++            root->current_frame_host()->GetProcess());
++
++  // Manipulating cookies from the main frame should not result in a renderer
++  // kill.
++  EXPECT_TRUE(ExecuteScript(root->current_frame_host(),
++                            "document.cookie = 'foo=bar';"));
++  std::string cookie;
++  EXPECT_TRUE(ExecuteScriptAndExtractString(
++      root->current_frame_host(),
++      "window.domAutomationController.send(document.cookie);", &cookie));
++  EXPECT_EQ("foo=bar", cookie);
++}
++
++// Similar to the test above, but for a ServiceWorker.  When a process has a
++// pending SiteProcessCountTracker entry for an isolated origin, and a
++// navigation to a non-isolated origin reuses that process, a ServiceWorker
++// subsequently created for that isolated origin shouldn't reuse that process.
++// See https://crbug.com/780661 and https://crbug.com/780089.
++IN_PROC_BROWSER_TEST_F(
++    IsolatedOriginTest,
++    IsolatedServiceWorkerDoesNotReuseUnsuitableProcessWithPendingSiteEntry) {
++  // This test requires PlzNavigate.
++  if (!IsBrowserSideNavigationEnabled())
++    return;
++
++  // Set the process limit to 1.
++  RenderProcessHost::SetMaxRendererProcessCount(1);
++
++  // Start from an about:blank page, where the SiteInstance will not have a
++  // site assigned, but will have an associated process.
++  EXPECT_TRUE(NavigateToURL(shell(), GURL(url::kAboutBlankURL)));
++  EXPECT_TRUE(web_contents()->GetMainFrame()->GetProcess()->IsUnused());
++
++  // Inject and click a link to an isolated origin URL which never sends back a
++  // response.
++  GURL hung_isolated_url(
++      embedded_test_server()->GetURL("isolated.foo.com", "/hung"));
++  TestNavigationManager manager(shell()->web_contents(), hung_isolated_url);
++  InjectAndClickLinkTo(hung_isolated_url);
++
++  // Wait for the request and send it.  This will place
++  // isolated.foo.com on the list of pending sites for this tab's process.
++  EXPECT_TRUE(manager.WaitForRequestStart());
++  manager.ResumeNavigation();
++
++  // Open a new, unrelated tab and navigate it to an unisolated URL. This
++  // should reuse the first process, which is still considered unused at this
++  // point, and mark it as used.
++  Shell* new_shell = CreateBrowser();
++  GURL foo_url(embedded_test_server()->GetURL("www.foo.com", "/title1.html"));
++  EXPECT_TRUE(NavigateToURL(new_shell, foo_url));
++
++  // A SiteInstance created for an isolated origin ServiceWorker should
++  // not reuse the unsuitable first process.
++  scoped_refptr<SiteInstanceImpl> sw_site_instance =
++      SiteInstanceImpl::CreateForURL(web_contents()->GetBrowserContext(),
++                                     hung_isolated_url);
++  sw_site_instance->set_is_for_service_worker();
++  sw_site_instance->set_process_reuse_policy(
++      SiteInstanceImpl::ProcessReusePolicy::REUSE_PENDING_OR_COMMITTED_SITE);
++  RenderProcessHost* sw_host = sw_site_instance->GetProcess();
++  EXPECT_NE(new_shell->web_contents()->GetMainFrame()->GetProcess(), sw_host);
++
++  // Cancel the hung request and commit a real navigation to an isolated
++  // origin. This should now end up in the ServiceWorker's process.
++  web_contents()->GetFrameTree()->root()->ResetNavigationRequest(false, false);
++  GURL isolated_url(
++      embedded_test_server()->GetURL("isolated.foo.com", "/title1.html"));
++  EXPECT_TRUE(NavigateToURL(shell(), isolated_url));
++  EXPECT_EQ(web_contents()->GetMainFrame()->GetProcess(), sw_host);
++}
++
+ // Check that subdomains on an isolated origin (e.g., bar.isolated.foo.com)
+ // also end up in the isolated origin's SiteInstance.
+ IN_PROC_BROWSER_TEST_F(IsolatedOriginTest, IsolatedOriginWithSubdomain) {
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 4f97648..a8dfd6c 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -825,6 +825,15 @@
+         NOTREACHED();
+         continue;
+       }
++
++      // It's possible that |host| has become unsuitable for hosting
++      // |site_url|, for example if it was reused by a navigation to a
++      // different site, and |site_url| requires a dedicated process.  Do not
++      // allow such hosts to be reused.  See https://crbug.com/780661.
++      if (!RenderProcessHostImpl::IsSuitableHost(
++              host, host->GetBrowserContext(), site_url))
++        continue;
++
+       if (host->VisibleWidgetCount())
+         foreground_processes->insert(host);
+       else
+--- a/build/config/mac/base_rules.gni
++++ b/build/config/mac/base_rules.gni
+@@ -144,6 +144,52 @@
+   }
+ }
+ 
++# Template to merge multiple .entitlements files performing variable
++# substitutions.
++#
++# Arguments
++#
++#     entitlements_templates:
++#         string array, paths to entitlements files which will be used for the
++#         bundle.
++#
++#     substitutions:
++#         string array, 'key=value' pairs used to replace ${key} by value
++#         when generating the output plist file.
++#
++#     output_name:
++#         string, name of the generated entitlements file.
++template("compile_entitlements") {
++  assert(defined(invoker.entitlements_templates),
++         "A list of template plist files must be specified for $target_name")
++
++  compile_plist(target_name) {
++    forward_variables_from(invoker,
++                           "*",
++                           [
++                             "entitlements_templates",
++                             "format",
++                             "plist_templates",
++                           ])
++
++    plist_templates = invoker.entitlements_templates
++
++    # Entitlements files are always encoded in xml1.
++    format = "xml1"
++
++    # Entitlements files use unsubstitued variables, so define substitutions
++    # to leave those variables untouched.
++    if (!defined(substitutions)) {
++      substitutions = []
++    }
++
++    substitutions += [
++      "AppIdentifierPrefix=\$(AppIdentifierPrefix)",
++      "CFBundleIdentifier=\$(CFBundleIdentifier)",
++    ]
++  }
++}
++
+ # The base template used to generate Info.plist files for iOS and Mac apps and
+ # frameworks.
+ #
+diff --git a/ios/chrome/app/BUILD.gn b/ios/chrome/app/BUILD.gn
+index 4fd6002..6f20571 100644
+--- a/ios/chrome/app/BUILD.gn
++++ b/ios/chrome/app/BUILD.gn
+@@ -85,11 +85,10 @@
+   ]
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
+-  plist_templates = [ "resources/Chrome.entitlements" ]
++compile_entitlements("entitlements") {
++  entitlements_templates = [ "resources/Chrome.entitlements" ]
+   if (ios_chrome_entitlements_additions != []) {
+-    plist_templates += ios_chrome_entitlements_additions
++    entitlements_templates += ios_chrome_entitlements_additions
+   }
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/$chromium_short_name.entitlements"
+diff --git a/ios/chrome/content_widget_extension/BUILD.gn b/ios/chrome/content_widget_extension/BUILD.gn
+index a1da6b9..83ca365 100644
+--- a/ios/chrome/content_widget_extension/BUILD.gn
++++ b/ios/chrome/content_widget_extension/BUILD.gn
+@@ -14,11 +14,10 @@
+   info_plist = "Info.plist"
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
++compile_entitlements("entitlements") {
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/content_widget_extension.appex.entitlements"
+-  plist_templates =
++  entitlements_templates =
+       [ "entitlements/external/content_widget_extension.appex.entitlements" ]
+ }
+ 
+diff --git a/ios/chrome/search_widget_extension/BUILD.gn b/ios/chrome/search_widget_extension/BUILD.gn
+index 5af610b..ca3ce9c 100644
+--- a/ios/chrome/search_widget_extension/BUILD.gn
++++ b/ios/chrome/search_widget_extension/BUILD.gn
+@@ -14,11 +14,10 @@
+   info_plist = "Info.plist"
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
++compile_entitlements("entitlements") {
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/search_widget_extension.appex.entitlements"
+-  plist_templates =
++  entitlements_templates =
+       [ "entitlements/external/search_widget_extension.appex.entitlements" ]
+ }
+ 
+diff --git a/ios/chrome/share_extension/BUILD.gn b/ios/chrome/share_extension/BUILD.gn
+index c1ff17d..5d2d0ab 100644
+--- a/ios/chrome/share_extension/BUILD.gn
++++ b/ios/chrome/share_extension/BUILD.gn
+@@ -27,11 +27,10 @@
+   info_plist = "Info.plist"
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
++compile_entitlements("entitlements") {
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/share_extension.appex.entitlements"
+-  plist_templates =
++  entitlements_templates =
+       [ "entitlements/external/share_extension.appex.entitlements" ]
+ }
+ 
+diff --git a/ios/chrome/test/earl_grey/chrome_ios_eg_test.gni b/ios/chrome/test/earl_grey/chrome_ios_eg_test.gni
+index ee51dfd..66af4a6 100644
+--- a/ios/chrome/test/earl_grey/chrome_ios_eg_test.gni
++++ b/ios/chrome/test/earl_grey/chrome_ios_eg_test.gni
+@@ -48,14 +48,13 @@
+   if (!defined(entitlements_path) && !defined(entitlements_target)) {
+     _target_name = target_name
+     _tweak_entitlements = target_name + "_tweak_entitlements"
+-    compile_plist(_tweak_entitlements) {
+-      format = "xml1"
++    compile_entitlements(_tweak_entitlements) {
+       substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+       output_name = "$target_gen_dir/$_target_name.entitlements"
+-      plist_templates =
++      entitlements_templates =
+           [ "//ios/chrome/test/earl_grey/resources/Chrome.entitlements" ]
+       if (ios_egtests_entitlements_additions != []) {
+-        plist_templates += ios_egtests_entitlements_additions
++        entitlements_templates += ios_egtests_entitlements_additions
+       }
+     }
+   }
+diff --git a/ios/clean/chrome/app/BUILD.gn b/ios/clean/chrome/app/BUILD.gn
+index 300a03e..c76f8d8 100644
+--- a/ios/clean/chrome/app/BUILD.gn
++++ b/ios/clean/chrome/app/BUILD.gn
+@@ -27,13 +27,12 @@
+   ]
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
+-  plist_templates = [ "resources/Chrome.entitlements" ]
++compile_entitlements("entitlements") {
++  entitlements_templates = [ "resources/Chrome.entitlements" ]
+   if (ios_chrome_entitlements_additions != []) {
+     # TODO(crbug.com/707206): Allow additional entitlements once the CSChromium
+     # mobile provisioning profiles have been updated.
+-    # plist_templates += ios_chrome_entitlements_additions
++    # entitlements_templates += ios_chrome_entitlements_additions
+   }
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/$chromium_short_name.entitlements"
+diff --git a/ios/clean/chrome/test/perf/BUILD.gn b/ios/clean/chrome/test/perf/BUILD.gn
+index e83caa8..4496adb 100644
+--- a/ios/clean/chrome/test/perf/BUILD.gn
++++ b/ios/clean/chrome/test/perf/BUILD.gn
+@@ -27,13 +27,12 @@
+   ]
+ }
+ 
+-compile_plist("entitlements") {
+-  format = "xml1"
+-  plist_templates = [ "resources/Chrome.entitlements" ]
++compile_entitlements("entitlements") {
++  entitlements_templates = [ "resources/Chrome.entitlements" ]
+   if (ios_chrome_entitlements_additions != []) {
+     # TODO(crbug.com/707206): Allow additional entitlements once the CSChromium
+     # mobile provisioning profiles have been updated.
+-    # plist_templates += ios_chrome_entitlements_additions
++    # entitlements_templates += ios_chrome_entitlements_additions
+   }
+   substitutions = [ "IOS_BUNDLE_ID_PREFIX=$ios_app_bundle_id_prefix" ]
+   output_name = "$target_gen_dir/$chromium_short_name.entitlements"
+--- a/build/config/mac/plist_util.py
++++ b/build/config/mac/plist_util.py
+@@ -12,13 +12,17 @@
+ import shlex
+ 
+ 
+-# Xcode substitutes variables like ${PRODUCT_NAME} when compiling Info.plist.
+-# It also supports supports modifiers like :identifier or :rfc1034identifier.
+-# SUBST_RE matches a variable substitution pattern with an optional modifier,
+-# while IDENT_RE matches all characters that are not valid in an "identifier"
+-# value (used when applying the modifier).
+-SUBST_RE = re.compile(r'\$\{(?P<id>[^}]*?)(?P<modifier>:[^}]*)?\}')
+-IDENT_RE = re.compile(r'[_/\s]')
++# Xcode substitutes variables like ${PRODUCT_NAME} or $(PRODUCT_NAME) when
++# compiling Info.plist. It also supports supports modifiers like :identifier
++# or :rfc1034identifier. SUBSTITUTION_REGEXP_LIST is a list of regular
++# expressions matching a variable substitution pattern with an optional
++# modifier, while INVALID_CHARACTER_REGEXP matches all characters that are
++# not valid in an "identifier" value (used when applying the modifier).
++INVALID_CHARACTER_REGEXP = re.compile(r'[_/\s]')
++SUBSTITUTION_REGEXP_LIST = (
++    re.compile(r'\$\{(?P<id>[^}]*?)(?P<modifier>:[^}]*)?\}'),
++    re.compile(r'\$\((?P<id>[^}]*?)(?P<modifier>:[^}]*)?\)'),
++)
+ 
+ 
+ class SubstitutionError(Exception):
+@@ -52,12 +56,14 @@
+     # "rfc1034identifier" replaces them by "-" to make valid URI too).
+     modifier = match.group('modifier')
+     if modifier == ':identifier':
+-      return IDENT_RE.sub('_', substitutions[variable])
++      return INVALID_CHARACTER_REGEXP.sub('_', substitutions[variable])
+     elif modifier == ':rfc1034identifier':
+-      return IDENT_RE.sub('-', substitutions[variable])
++      return INVALID_CHARACTER_REGEXP.sub('-', substitutions[variable])
+     else:
+       return substitutions[variable]
+-  return SUBST_RE.sub(repl, value)
++  for substitution_regexp in SUBSTITUTION_REGEXP_LIST:
++    value = substitution_regexp.sub(repl, value)
++  return value
+ 
+ 
+ def Interpolate(value, substitutions):
+--- a/ios/chrome/browser/content_suggestions/content_suggestions_header_view_controller.mm
++++ b/ios/chrome/browser/content_suggestions/content_suggestions_header_view_controller.mm
+@@ -129,7 +129,9 @@
+ 
+ #pragma mark - ContentSuggestionsHeaderControlling
+ 
+-- (void)updateFakeOmniboxForOffset:(CGFloat)offset width:(CGFloat)width {
++- (void)updateFakeOmniboxForOffset:(CGFloat)offset
++                       screenWidth:(CGFloat)screenWidth
++                    safeAreaInsets:(UIEdgeInsets)safeAreaInsets {
+   NSArray* constraints =
+       @[ self.hintLabelLeadingConstraint, self.voiceTapTrailingConstraint ];
+ 
+@@ -137,9 +139,9 @@
+                                    height:self.fakeOmniboxHeightConstraint
+                                 topMargin:self.fakeOmniboxTopMarginConstraint
+                        subviewConstraints:constraints
+-                            logoIsShowing:self.logoIsShowing
+                                 forOffset:offset
+-                                    width:width];
++                              screenWidth:screenWidth
++                           safeAreaInsets:safeAreaInsets];
+ }
+ 
+ - (void)updateFakeOmniboxForWidth:(CGFloat)width {
+diff --git a/ios/chrome/browser/ui/collection_view/collection_view_controller.mm b/ios/chrome/browser/ui/collection_view/collection_view_controller.mm
+index 2336cb5..28e6e4d 100644
+--- a/ios/chrome/browser/ui/collection_view/collection_view_controller.mm
++++ b/ios/chrome/browser/ui/collection_view/collection_view_controller.mm
+@@ -38,13 +38,6 @@
+ - (void)viewDidLoad {
+   [super viewDidLoad];
+ 
+-  if (base::ios::IsRunningOnIOS11OrLater()) {
+-    if (@available(iOS 11, *)) {
+-      self.collectionView.contentInsetAdjustmentBehavior =
+-          UIScrollViewContentInsetAdjustmentNever;
+-    }
+-  }
+-
+   // Configure the app bar, if there is one.
+   if (self.appBar) {
+     // Configure the app bar style.
+diff --git a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_controlling.h b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_controlling.h
+index 8506711..3157b38 100644
+--- a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_controlling.h
++++ b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_controlling.h
+@@ -18,8 +18,12 @@
+     collectionSynchronizer;
+ 
+ // Updates the iPhone fakebox's frame based on the current scroll view |offset|
+-// and |width|. |width| can be 0 to use the current view width.
+-- (void)updateFakeOmniboxForOffset:(CGFloat)offset width:(CGFloat)width;
++// and |width|. |width| is the width of the screen, including the space outside
++// the safe area. The |safeAreaInsets| is relative to the view used to calculate
++// the |width|.
++- (void)updateFakeOmniboxForOffset:(CGFloat)offset
++                       screenWidth:(CGFloat)screenWidth
++                    safeAreaInsets:(UIEdgeInsets)safeAreaInsets;
+ 
+ // Updates the fakeomnibox's width in order to be adapted to the new |width|,
+ // without taking the y-position into account.
+diff --git a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer.mm b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer.mm
+index 6f1088c..a64f996 100644
+--- a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer.mm
++++ b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer.mm
+@@ -160,7 +160,8 @@
+   if (self.shouldAnimateHeader) {
+     [self.headerController
+         updateFakeOmniboxForOffset:self.collectionView.contentOffset.y
+-                             width:0];
++                       screenWidth:self.collectionView.frame.size.width
++                    safeAreaInsets:SafeAreaInsetsForView(self.collectionView)];
+   }
+ }
+ 
+@@ -168,7 +169,8 @@
+   if (self.shouldAnimateHeader && !IsIPadIdiom()) {
+     [self.headerController
+         updateFakeOmniboxForOffset:self.collectionView.contentOffset.y
+-                             width:width];
++                       screenWidth:width
++                    safeAreaInsets:SafeAreaInsetsForView(self.collectionView)];
+   } else {
+     [self.headerController updateFakeOmniboxForWidth:width];
+   }
+diff --git a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer_unittest.mm b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer_unittest.mm
+index 1de0b59..5f879d1 100644
+--- a/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer_unittest.mm
++++ b/ios/chrome/browser/ui/content_suggestions/content_suggestions_header_synchronizer_unittest.mm
+@@ -68,7 +68,8 @@
+   id headerController = HeaderController();
+   OCMExpect([[[headerController stub] ignoringNonObjectArgs]
+       updateFakeOmniboxForOffset:10
+-                           width:0]);
++                     screenWidth:0
++                  safeAreaInsets:UIEdgeInsetsZero]);
+   SetAsIPhone();
+ 
+   // Action.
+diff --git a/ios/chrome/browser/ui/content_suggestions/content_suggestions_view_controller.mm b/ios/chrome/browser/ui/content_suggestions/content_suggestions_view_controller.mm
+index 76de915..12fef88 100644
+--- a/ios/chrome/browser/ui/content_suggestions/content_suggestions_view_controller.mm
++++ b/ios/chrome/browser/ui/content_suggestions/content_suggestions_view_controller.mm
+@@ -215,6 +215,13 @@
+   if (@available(iOS 10, *)) {
+     self.collectionView.prefetchingEnabled = NO;
+   }
++  if (@available(iOS 11, *)) {
++    // Use automatic behavior as each element takes the safe area into account
++    // separately and the overscroll action does not work well with content
++    // offset.
++    self.collectionView.contentInsetAdjustmentBehavior =
++        UIScrollViewContentInsetAdjustmentAutomatic;
++  }
+   self.collectionView.accessibilityIdentifier =
+       [[self class] collectionAccessibilityIdentifier];
+   _collectionUpdater.collectionViewController = self;
+@@ -567,12 +574,13 @@
+       !self.containsToolbar)
+     return;
+ 
++  CGFloat xOffset = self.collectionView.contentOffset.x;
+   // Adjust the toolbar to be all the way on or off screen.
+   if (targetY > toolbarHeight / 2) {
+-    [self.collectionView setContentOffset:CGPointMake(0, toolbarHeight)
++    [self.collectionView setContentOffset:CGPointMake(xOffset, toolbarHeight)
+                                  animated:YES];
+   } else {
+-    [self.collectionView setContentOffset:CGPointMake(0, 0) animated:YES];
++    [self.collectionView setContentOffset:CGPointMake(xOffset, 0) animated:YES];
+   }
+ }
+ 
+diff --git a/ios/chrome/browser/ui/content_suggestions/ntp_home_egtest.mm b/ios/chrome/browser/ui/content_suggestions/ntp_home_egtest.mm
+index b70cc01..48cfe68 100644
+--- a/ios/chrome/browser/ui/content_suggestions/ntp_home_egtest.mm
++++ b/ios/chrome/browser/ui/content_suggestions/ntp_home_egtest.mm
+@@ -22,6 +22,7 @@
+ #import "ios/chrome/browser/ui/content_suggestions/ntp_home_provider_test_singleton.h"
+ #import "ios/chrome/browser/ui/content_suggestions/ntp_home_test_utils.h"
+ #include "ios/chrome/browser/ui/ui_util.h"
++#import "ios/chrome/browser/ui/uikit_ui_util.h"
+ #include "ios/chrome/grit/ios_strings.h"
+ #import "ios/chrome/test/app/chrome_test_util.h"
+ #import "ios/chrome/test/app/history_test_util.h"
+@@ -178,7 +179,9 @@
+     EARL_GREY_TEST_DISABLED(@"Disabled for iPad due to device rotation bug.");
+   }
+   [[GREYUIThreadExecutor sharedInstance] drainUntilIdle];
+-  CGFloat collectionWidth = CollectionView().bounds.size.width;
++  UIEdgeInsets safeArea = SafeAreaInsetsForView(CollectionView());
++  CGFloat collectionWidth =
++      CGRectGetWidth(UIEdgeInsetsInsetRect(CollectionView().bounds, safeArea));
+   GREYAssertTrue(collectionWidth > 0, @"The collection width is nil.");
+   CGFloat fakeOmniboxWidth = searchFieldWidth(collectionWidth);
+ 
+@@ -190,7 +193,9 @@
+                            errorOrNil:nil];
+   [[GREYUIThreadExecutor sharedInstance] drainUntilIdle];
+ 
+-  CGFloat collectionWidthAfterRotation = CollectionView().bounds.size.width;
++  safeArea = SafeAreaInsetsForView(CollectionView());
++  CGFloat collectionWidthAfterRotation =
++      CGRectGetWidth(UIEdgeInsetsInsetRect(CollectionView().bounds, safeArea));
+   GREYAssertNotEqual(collectionWidth, collectionWidthAfterRotation,
+                      @"The collection width has not changed.");
+   fakeOmniboxWidth = searchFieldWidth(collectionWidthAfterRotation);
+@@ -209,7 +214,9 @@
+     EARL_GREY_TEST_DISABLED(@"Disabled for iPad due to device rotation bug.");
+   }
+   [[GREYUIThreadExecutor sharedInstance] drainUntilIdle];
+-  CGFloat collectionWidth = CollectionView().bounds.size.width;
++  UIEdgeInsets safeArea = SafeAreaInsetsForView(CollectionView());
++  CGFloat collectionWidth =
++      CGRectGetWidth(UIEdgeInsetsInsetRect(CollectionView().bounds, safeArea));
+   GREYAssertTrue(collectionWidth > 0, @"The collection width is nil.");
+   CGFloat fakeOmniboxWidth = searchFieldWidth(collectionWidth);
+ 
+@@ -228,7 +235,9 @@
+                                    IDS_IOS_NAVIGATION_BAR_DONE_BUTTON)]
+       performAction:grey_tap()];
+ 
+-  CGFloat collectionWidthAfterRotation = CollectionView().bounds.size.width;
++  safeArea = SafeAreaInsetsForView(CollectionView());
++  CGFloat collectionWidthAfterRotation =
++      CGRectGetWidth(UIEdgeInsetsInsetRect(CollectionView().bounds, safeArea));
+   GREYAssertNotEqual(collectionWidth, collectionWidthAfterRotation,
+                      @"The collection width has not changed.");
+   fakeOmniboxWidth = searchFieldWidth(collectionWidthAfterRotation);
+diff --git a/ios/chrome/browser/ui/ntp/google_landing_view_controller.mm b/ios/chrome/browser/ui/ntp/google_landing_view_controller.mm
+index 98c985f..8c08bbe 100644
+--- a/ios/chrome/browser/ui/ntp/google_landing_view_controller.mm
++++ b/ios/chrome/browser/ui/ntp/google_landing_view_controller.mm
+@@ -492,9 +492,9 @@
+                                height:_searchFieldHeightConstraint
+                             topMargin:_searchFieldTopMarginConstraint
+                    subviewConstraints:constraints
+-                        logoIsShowing:self.logoIsShowing
+                             forOffset:[_mostVisitedView contentOffset].y
+-                                width:0];
++                          screenWidth:_mostVisitedView.bounds.size.width
++                       safeAreaInsets:SafeAreaInsetsForView(self.view)];
+ }
+ 
+ - (void)addOverscrollActions {
+@@ -686,8 +686,10 @@
+            forWidth:width];
+   [_doodleTopMarginConstraint
+       setConstant:content_suggestions::doodleTopMargin(YES)];
++  UIEdgeInsets safeAreaInsets = SafeAreaInsetsForView(self.view);
++  CGFloat contentWidth = width - safeAreaInsets.left - safeAreaInsets.right;
+   [_searchFieldWidthConstraint
+-      setConstant:content_suggestions::searchFieldWidth(width)];
++      setConstant:content_suggestions::searchFieldWidth(contentWidth)];
+   [_searchFieldTopMarginConstraint
+       setConstant:content_suggestions::searchFieldTopMargin()];
+ }
+diff --git a/ios/chrome/browser/ui/ntp/new_tab_page_header_view.h b/ios/chrome/browser/ui/ntp/new_tab_page_header_view.h
+index 8289063..dbd839d 100644
+--- a/ios/chrome/browser/ui/ntp/new_tab_page_header_view.h
++++ b/ios/chrome/browser/ui/ntp/new_tab_page_header_view.h
+@@ -26,16 +26,16 @@
+ 
+ // Changes the constraints of searchField based on its initialFrame and the
+ // scroll view's y |offset|. Also adjust the alpha values for |_searchBoxBorder|
+-// and |_shadow| and the constant values for the |constraints|.
+-// If |width| is > 0, it is used as the width to compute the new fake omnibox
+-// width.
++// and |_shadow| and the constant values for the |constraints|.|screenWidth| is
++// the width of the screen, including the space outside the safe area. The
++// |safeAreaInsets| is relative to the view used to calculate the |width|.
+ - (void)updateSearchFieldWidth:(NSLayoutConstraint*)widthConstraint
+                         height:(NSLayoutConstraint*)heightConstraint
+                      topMargin:(NSLayoutConstraint*)topMarginConstraint
+             subviewConstraints:(NSArray*)constraints
+-                 logoIsShowing:(BOOL)logoIsShowing
+                      forOffset:(CGFloat)offset
+-                         width:(CGFloat)width;
++                   screenWidth:(CGFloat)screenWidth
++                safeAreaInsets:(UIEdgeInsets)safeAreaInsets;
+ 
+ // Initializes |_searchBoxBorder| and |_shadow| and adds them to |searchField|.
+ - (void)addViewsToSearchField:(UIView*)searchField;
+diff --git a/ios/chrome/browser/ui/ntp/new_tab_page_header_view.mm b/ios/chrome/browser/ui/ntp/new_tab_page_header_view.mm
+index f11fed9..d50c2405 100644
+--- a/ios/chrome/browser/ui/ntp/new_tab_page_header_view.mm
++++ b/ios/chrome/browser/ui/ntp/new_tab_page_header_view.mm
+@@ -144,10 +144,11 @@
+                         height:(NSLayoutConstraint*)heightConstraint
+                      topMargin:(NSLayoutConstraint*)topMarginConstraint
+             subviewConstraints:(NSArray*)constraints
+-                 logoIsShowing:(BOOL)logoIsShowing
+                      forOffset:(CGFloat)offset
+-                         width:(CGFloat)width {
+-  CGFloat screenWidth = width > 0 ? width : self.bounds.size.width;
++                   screenWidth:(CGFloat)screenWidth
++                safeAreaInsets:(UIEdgeInsets)safeAreaInsets {
++  CGFloat contentWidth = std::max<CGFloat>(
++      0, screenWidth - safeAreaInsets.left - safeAreaInsets.right);
+   // The scroll offset at which point searchField's frame should stop growing.
+   CGFloat maxScaleOffset =
+       self.frame.size.height - ntp_header::kMinHeaderHeight;
+@@ -160,11 +161,11 @@
+     percent = MIN(1, MAX(0, animatingOffset / ntp_header::kAnimationDistance));
+   }
+ 
+-  if (screenWidth == 0)
++  if (screenWidth == 0 || contentWidth == 0)
+     return;
+ 
+   CGFloat searchFieldNormalWidth =
+-      content_suggestions::searchFieldWidth(screenWidth);
++      content_suggestions::searchFieldWidth(contentWidth);
+ 
+   // Calculate the amount to grow the width and height of searchField so that
+   // its frame covers the entire toolbar area.
+@@ -184,7 +185,8 @@
+ 
+   // Adjust the position of the search field's subviews by adjusting their
+   // constraint constant value.
+-  CGFloat constantDiff = percent * ntp_header::kMaxHorizontalMarginDiff;
++  CGFloat constantDiff =
++      percent * (ntp_header::kMaxHorizontalMarginDiff + safeAreaInsets.left);
+   for (NSLayoutConstraint* constraint in constraints) {
+     if (constraint.constant > 0)
+       constraint.constant = constantDiff + ntp_header::kHintLabelSidePadding;
+diff --git a/ios/clean/chrome/browser/ui/ntp/ntp_home_header_view_controller.mm b/ios/clean/chrome/browser/ui/ntp/ntp_home_header_view_controller.mm
+index b280ea0..e1702a0 100644
+--- a/ios/clean/chrome/browser/ui/ntp/ntp_home_header_view_controller.mm
++++ b/ios/clean/chrome/browser/ui/ntp/ntp_home_header_view_controller.mm
+@@ -84,7 +84,9 @@
+ 
+ #pragma mark - ContentSuggestionsHeaderControlling
+ 
+-- (void)updateFakeOmniboxForOffset:(CGFloat)offset width:(CGFloat)width {
++- (void)updateFakeOmniboxForOffset:(CGFloat)offset
++                       screenWidth:(CGFloat)screenWidth
++                    safeAreaInsets:(UIEdgeInsets)safeAreaInsets {
+   // The scroll offset at which point the fake omnibox's frame should stop
+   // growing.
+   CGFloat maxScaleOffset =
+--- a/chrome/browser/extensions/extension_service.cc
++++ b/chrome/browser/extensions/extension_service.cc
+@@ -464,6 +464,7 @@
+   LoadExtensionsFromCommandLineFlag(switches::kDisableExtensionsExcept);
+   if (load_command_line_extensions)
+     LoadExtensionsFromCommandLineFlag(extensions::switches::kLoadExtension);
++  EnableZipUnpackerExtension();
+   EnabledReloadableExtensions();
+   MaybeFinishShutdownDelayed();
+   SetReadyAndNotifyListeners();
+@@ -477,6 +478,24 @@
+   LoadGreylistFromPrefs();
+ }
+ 
++void ExtensionService::EnableZipUnpackerExtensionForTest() {
++  EnableZipUnpackerExtension();
++}
++
++void ExtensionService::EnableZipUnpackerExtension() {
++  TRACE_EVENT0("browser,startup",
++               "ExtensionService::EnableZipUnpackerExtension");
++
++#if defined(OS_CHROMEOS)
++  // There were some cases where the Zip Unpacker was disabled in the profile,
++  // by some reason, and cannot re-enable it in any UI. crbug.com/643060
++  const std::string& id = extension_misc::kZIPUnpackerExtensionId;
++  const Extension* extension = registry_->disabled_extensions().GetByID(id);
++  if (extension && CanEnableExtension(extension))
++    EnableExtension(id);
++#endif
++}
++
+ void ExtensionService::EnabledReloadableExtensions() {
+   TRACE_EVENT0("browser,startup",
+                "ExtensionService::EnabledReloadableExtensions");
+diff --git a/chrome/browser/extensions/extension_service.h b/chrome/browser/extensions/extension_service.h
+index 2ff882a3..afe623d 100644
+--- a/chrome/browser/extensions/extension_service.h
++++ b/chrome/browser/extensions/extension_service.h
+@@ -414,6 +414,9 @@
+   // Reloads all extensions. Does not notify that extensions are ready.
+   void ReloadExtensionsForTest();
+ 
++  // Enable Zip Unpacker Extension component extensions for unit test.
++  void EnableZipUnpackerExtensionForTest();
++
+   // Clear all ExternalProviders.
+   void ClearProvidersForTesting();
+ 
+@@ -485,6 +488,12 @@
+   // externally managed extension.  If so, uninstall it.
+   void CheckExternalUninstall(const std::string& id);
+ 
++  // Attempt to enable Zip Unpacker component extension if it is disabled.
++  // This function doesn't override MUST_REAMIN_DISABLED management policy.
++  // Component extensions are managed and cannot be disabled by user, however,
++  // there are some cases having a disabled component extension in profile.
++  void EnableZipUnpackerExtension();
++
+   // Attempt to enable all disabled extensions which the only disabled reason is
+   // reloading.
+   void EnabledReloadableExtensions();
+diff --git a/chrome/browser/extensions/extension_service_unittest.cc b/chrome/browser/extensions/extension_service_unittest.cc
+index 65a44a3..454a371 100644
+--- a/chrome/browser/extensions/extension_service_unittest.cc
++++ b/chrome/browser/extensions/extension_service_unittest.cc
+@@ -201,6 +201,7 @@
+ const char permissions_blocklist[] = "noffkehfcaggllbcojjbopcmlhcnhcdn";
+ const char cast_stable[] = "boadgeojelhgndaghljhdicfkmllpafd";
+ const char cast_beta[] = "dliochdbjfkdbacpmhlcpmleaejidimm";
++const char zip_unpacker[] = "oedeeodfidgoollimchfdnbmhcpnklnd";
+ 
+ struct BubbleErrorsTestData {
+   BubbleErrorsTestData(const std::string& id,
+@@ -7298,3 +7299,46 @@
+   service()->UninstallMigratedExtensionsForTest();
+   EXPECT_FALSE(service()->GetInstalledExtension(cast_stable));
+ }
++
++TEST_F(ExtensionServiceTest, EnableZipUnpackerExtension) {
++  InitializeEmptyExtensionService();
++
++  scoped_refptr<const Extension> zip_unpacker_extension =
++      ExtensionBuilder("stable")
++          .SetID(zip_unpacker)
++          .SetLocation(Manifest::EXTERNAL_COMPONENT)
++          .Build();
++  service()->AddExtension(zip_unpacker_extension.get());
++  service()->DisableExtension(zip_unpacker,
++                              extensions::disable_reason::DISABLE_USER_ACTION);
++  ASSERT_TRUE(registry()->disabled_extensions().Contains(zip_unpacker));
++
++  service()->EnableZipUnpackerExtensionForTest();
++#if defined(OS_CHROMEOS)
++  ASSERT_TRUE(registry()->enabled_extensions().Contains(zip_unpacker));
++#else
++  ASSERT_TRUE(registry()->disabled_extensions().Contains(zip_unpacker));
++#endif
++}
++
++TEST_F(ExtensionServiceTest, ShouldNotEnableZipUnpackerExtensionAgainstPolicy) {
++  InitializeEmptyExtensionService();
++
++  GetManagementPolicy()->UnregisterAllProviders();
++  extensions::TestManagementPolicyProvider provider_(
++      extensions::TestManagementPolicyProvider::MUST_REMAIN_DISABLED);
++  GetManagementPolicy()->RegisterProvider(&provider_);
++
++  scoped_refptr<const Extension> zip_unpacker_extension =
++      ExtensionBuilder("stable")
++          .SetID(zip_unpacker)
++          .SetLocation(Manifest::EXTERNAL_COMPONENT)
++          .Build();
++  service()->AddExtension(zip_unpacker_extension.get());
++  service()->DisableExtension(zip_unpacker,
++                              extensions::disable_reason::DISABLE_USER_ACTION);
++  ASSERT_TRUE(registry()->disabled_extensions().Contains(zip_unpacker));
++
++  service()->EnableZipUnpackerExtensionForTest();
++  ASSERT_FALSE(registry()->enabled_extensions().Contains(zip_unpacker));
++}
+--- a/chrome/browser/ui/webui/signin/login_ui_service.h
++++ b/chrome/browser/ui/webui/signin/login_ui_service.h
+@@ -82,9 +82,9 @@
+   // Displays login results. This is either the Modal Signin Error dialog if
+   // |error_message| is a non-empty string, or the User Menu with a blue header
+   // toast otherwise.
+-  void DisplayLoginResult(Browser* browser,
+-                          const base::string16& error_message,
+-                          const base::string16& email);
++  virtual void DisplayLoginResult(Browser* browser,
++                                  const base::string16& error_message,
++                                  const base::string16& email);
+ 
+   // Gets the last login result set through |DisplayLoginResult|.
+   const base::string16& GetLastLoginResult() const;
+diff --git a/chrome/browser/ui/webui/signin/user_manager_screen_handler.cc b/chrome/browser/ui/webui/signin/user_manager_screen_handler.cc
+index 3f12afd..8984797 100644
+--- a/chrome/browser/ui/webui/signin/user_manager_screen_handler.cc
++++ b/chrome/browser/ui/webui/signin/user_manager_screen_handler.cc
+@@ -209,6 +209,15 @@
+       ProfileMetrics::DELETE_PROFILE_USER_MANAGER_SHOW_WARNING);
+ }
+ 
++void DisplayErrorMessage(const base::string16 error_message,
++                         content::WebUI* web_ui) {
++  LoginUIServiceFactory::GetForProfile(
++      Profile::FromWebUI(web_ui)->GetOriginalProfile())
++      ->DisplayLoginResult(nullptr, error_message, base::string16());
++  UserManagerProfileDialog::ShowDialogAndDisplayErrorMessage(
++      web_ui->GetWebContents()->GetBrowserContext());
++}
++
+ }  // namespace
+ 
+ // ProfileUpdateObserver ------------------------------------------------------
+@@ -455,13 +464,22 @@
+     // Supervised profile will only be locked when force-sign-in is enabled
+     // and it shouldn't be unlocked. Display the error message directly via
+     // the system profile to avoid profile creation.
+-    LoginUIServiceFactory::GetForProfile(
+-        Profile::FromWebUI(web_ui())->GetOriginalProfile())
+-        ->DisplayLoginResult(nullptr,
+-                             l10n_util::GetStringUTF16(
+-                                 IDS_SUPERVISED_USER_NOT_ALLOWED_BY_POLICY),
+-                             base::string16());
+-    UserManagerProfileDialog::ShowDialogAndDisplayErrorMessage(browser_context);
++    DisplayErrorMessage(
++        l10n_util::GetStringUTF16(IDS_SUPERVISED_USER_NOT_ALLOWED_BY_POLICY),
++        web_ui());
++  } else if (entry->IsSigninRequired() && signin_util::IsForceSigninEnabled() &&
++             entry->GetActiveTime() != base::Time()) {
++    // If force-sign-in is enabled, do not allow users to sign in to a
++    // pre-existing locked profile, as this may force unexpected profile data
++    // merge. We consider a profile as pre-existing if it has been actived
++    // previously. A pre-existed profile can still be used if it has been signed
++    // in with an email address matched RestrictSigninToPattern policy already.
++    // TODO(crbug.com/775546, zmin): Improving the error message here.
++    DisplayErrorMessage(
++        l10n_util::GetStringFUTF16(
++            IDS_PLUGIN_BLOCKED_BY_POLICY,
++            l10n_util::GetStringUTF16(IDS_TASK_MANAGER_PROFILE_NAME_COLUMN)),
++        web_ui());
+   } else {
+     // Fresh sign in via user manager without existing email address.
+     UserManagerProfileDialog::ShowSigninDialog(browser_context, profile_path);
+diff --git a/chrome/browser/ui/webui/signin/user_manager_ui_browsertest.cc b/chrome/browser/ui/webui/signin/user_manager_ui_browsertest.cc
+index 2cfedd5..dd9abef 100644
+--- a/chrome/browser/ui/webui/signin/user_manager_ui_browsertest.cc
++++ b/chrome/browser/ui/webui/signin/user_manager_ui_browsertest.cc
+@@ -10,8 +10,10 @@
+ #include "chrome/browser/profiles/profile_manager.h"
+ #include "chrome/browser/profiles/profile_window.h"
+ #include "chrome/browser/profiles/profiles_state.h"
++#include "chrome/browser/signin/signin_util.h"
+ #include "chrome/browser/ui/browser.h"
+ #include "chrome/browser/ui/tabs/tab_strip_model.h"
++#include "chrome/browser/ui/webui/signin/login_ui_service_factory.h"
+ #include "chrome/common/chrome_switches.h"
+ #include "chrome/common/url_constants.h"
+ #include "chrome/grit/chromium_strings.h"
+@@ -21,8 +23,27 @@
+ #include "components/signin/core/common/profile_management_switches.h"
+ #include "content/public/browser/web_contents.h"
+ #include "content/public/test/browser_test_utils.h"
++#include "testing/gmock/include/gmock/gmock.h"
++#include "testing/gtest/include/gtest/gtest.h"
+ #include "ui/base/l10n/l10n_util.h"
+ 
++using ::testing::_;
++
++class MockLoginUIService : public LoginUIService {
++ public:
++  MockLoginUIService() : LoginUIService(nullptr) {}
++  ~MockLoginUIService() override {}
++  MOCK_METHOD3(DisplayLoginResult,
++               void(Browser* browser,
++                    const base::string16& error_message,
++                    const base::string16& email));
++};
++
++std::unique_ptr<KeyedService> CreateLoginUIService(
++    content::BrowserContext* context) {
++  return std::make_unique<MockLoginUIService>();
++}
++
+ class UserManagerUIBrowserTest : public InProcessBrowserTest,
+                                  public testing::WithParamInterface<bool> {
+  public:
+@@ -85,5 +106,36 @@
+   EXPECT_EQ(GURL(chrome::kChromeUIHelpURL), current_URL);
+ }
+ 
++IN_PROC_BROWSER_TEST_F(UserManagerUIBrowserTest, LaunchBlockedUser) {
++  ui_test_utils::NavigateToURL(browser(),
++                               GURL(chrome::kChromeUIMdUserManagerUrl));
++  content::WebContents* web_contents =
++      browser()->tab_strip_model()->GetActiveWebContents();
++
++  signin_util::SetForceSigninForTesting(true);
++
++  Profile* profile = browser()->profile();
++  ProfileAttributesEntry* entry;
++  EXPECT_TRUE(g_browser_process->profile_manager()
++                  ->GetProfileAttributesStorage()
++                  .GetProfileAttributesWithPath(profile->GetPath(), &entry));
++  entry->SetIsSigninRequired(true);
++  entry->SetActiveTimeToNow();
++  MockLoginUIService* service = static_cast<MockLoginUIService*>(
++      LoginUIServiceFactory::GetInstance()->SetTestingFactoryAndUse(
++          profile, CreateLoginUIService));
++
++  std::string profile_path;
++  base::ReplaceChars(profile->GetPath().MaybeAsASCII(), "\\", "\\\\",
++                     &profile_path);
++  std::string launch_js = base::StringPrintf(
++      "chrome.send('authenticatedLaunchUser', ['%s', '', ''])",
++      profile_path.c_str());
++
++  EXPECT_CALL(*service, DisplayLoginResult(_, _, _));
++
++  EXPECT_TRUE(content::ExecuteScript(web_contents, launch_js));
++}
++
+ // TODO(mlerman): Test that unlocking a locked profile causes the extensions
+ // service to become unblocked.
+--- a/content/browser/devtools/protocol/devtools_protocol_browsertest.cc
++++ b/content/browser/devtools/protocol/devtools_protocol_browsertest.cc
+@@ -627,20 +627,17 @@
+       jpeg_data.size());
+ }
+ 
+-bool ColorsMatchWithinLimit(SkColor color1,
+-                            SkColor color2,
+-                            int32_t error_limit) {
+-  auto a_distance = std::abs(static_cast<int32_t>(SkColorGetA(color1)) -
+-                             static_cast<int32_t>(SkColorGetA(color2)));
+-  auto r_distance = std::abs(static_cast<int32_t>(SkColorGetR(color1)) -
+-                             static_cast<int32_t>(SkColorGetR(color2)));
+-  auto g_distance = std::abs(static_cast<int32_t>(SkColorGetG(color1)) -
+-                             static_cast<int32_t>(SkColorGetG(color2)));
+-  auto b_distance = std::abs(static_cast<int32_t>(SkColorGetB(color1)) -
+-                             static_cast<int32_t>(SkColorGetB(color2)));
+-
+-  return a_distance * a_distance + r_distance * r_distance +
+-             g_distance * g_distance + b_distance * b_distance <=
++bool ColorsMatchWithinLimit(SkColor color1, SkColor color2, int error_limit) {
++  auto a_diff = static_cast<int>(SkColorGetA(color1)) -
++                static_cast<int>(SkColorGetA(color2));
++  auto r_diff = static_cast<int>(SkColorGetR(color1)) -
++                static_cast<int>(SkColorGetR(color2));
++  auto g_diff = static_cast<int>(SkColorGetG(color1)) -
++                static_cast<int>(SkColorGetG(color2));
++  auto b_diff = static_cast<int>(SkColorGetB(color1)) -
++                static_cast<int>(SkColorGetB(color2));
++  return a_diff * a_diff + r_diff * r_diff + g_diff * g_diff +
++             b_diff * b_diff <=
+          error_limit * error_limit;
+ }
+ 
+@@ -675,7 +672,7 @@
+       SkColor expected_color = expected_bmp.getColor(x, y);
+       if (!ColorsMatchWithinLimit(actual_color, expected_color, error_limit)) {
+         if (error_pixels_count < 10) {
+-          LOG(ERROR) << "Pixel (" << x << "," << y << "): expected "
++          LOG(ERROR) << "Pixel (" << x << "," << y << "): expected " << std::hex
+                      << expected_color << " actual " << actual_color;
+         }
+         error_pixels_count++;
+@@ -722,16 +719,11 @@
+     std::string base64;
+     EXPECT_TRUE(result_->GetString("data", &base64));
+     std::unique_ptr<SkBitmap> result_bitmap;
+-    int error_limit = 0;
+     if (encoding == ENCODING_PNG) {
+       result_bitmap.reset(new SkBitmap());
+       EXPECT_TRUE(DecodePNG(base64, result_bitmap.get()));
+     } else {
+       result_bitmap = DecodeJPEG(base64);
+-      // Even with quality 100, jpeg isn't lossless. So, we allow some skew in
+-      // pixel values. Not that this assumes that there is no skew in pixel
+-      // positions, so will only work reliably if all pixels have equal values.
+-      error_limit = 3;
+     }
+     EXPECT_TRUE(result_bitmap);
+ 
+@@ -741,6 +733,14 @@
+     // rounded corners.
+     matching_mask.Inset(4, 4, 4, 4);
+ #endif
++
++    // A color profile can be installed on the host that could affect
++    // pixel colors. Also JPEG compression could further distort the color.
++    // Allow some error between actual and expected pixel values.
++    // That assumes there is no shift in pixel positions, so it only works
++    // reliably if all pixels have equal values.
++    int error_limit = 6;
++
+     EXPECT_TRUE(MatchesBitmap(expected_bitmap, *result_bitmap, matching_mask,
+                               device_scale_factor, error_limit));
+   }
+--- a/content/browser/devtools/protocol/devtools_protocol_browsertest.cc
++++ b/content/browser/devtools/protocol/devtools_protocol_browsertest.cc
+@@ -739,7 +739,7 @@
+     // Allow some error between actual and expected pixel values.
+     // That assumes there is no shift in pixel positions, so it only works
+     // reliably if all pixels have equal values.
+-    int error_limit = 6;
++    int error_limit = 16;
+ 
+     EXPECT_TRUE(MatchesBitmap(expected_bitmap, *result_bitmap, matching_mask,
+                               device_scale_factor, error_limit));
+--- a/chrome/browser/themes/browser_theme_pack.cc
++++ b/chrome/browser/themes/browser_theme_pack.cc
+@@ -180,13 +180,12 @@
+ // The order must match as the index is used in determining the raw id.
+ bool InputScalesValid(const base::StringPiece& input,
+                       const std::vector<ui::ScaleFactor>& expected) {
+-  size_t scales_size = static_cast<size_t>(input.size() / sizeof(float));
+-  if (scales_size != expected.size())
++  if (input.size() != expected.size() * sizeof(float))
+     return false;
+-  std::unique_ptr<float[]> scales(new float[scales_size]);
++  std::unique_ptr<float[]> scales(new float[expected.size()]);
+   // Do a memcpy to avoid misaligned memory access.
+   memcpy(scales.get(), input.data(), input.size());
+-  for (size_t index = 0; index < scales_size; ++index) {
++  for (size_t index = 0; index < expected.size(); ++index) {
+     if (scales[index] != ui::GetScaleForScaleFactor(expected[index]))
+       return false;
+   }
+--- a/chrome/browser/ui/libgtkui/nav_button_provider_gtk3.cc
++++ b/chrome/browser/ui/libgtkui/nav_button_provider_gtk3.cc
+@@ -28,9 +28,8 @@
+     case chrome::FrameButtonDisplayType::kMinimize:
+       return "minimize";
+     case chrome::FrameButtonDisplayType::kMaximize:
+-      return "maximize";
+     case chrome::FrameButtonDisplayType::kRestore:
+-      return "restore";
++      return "maximize";
+     case chrome::FrameButtonDisplayType::kClose:
+       return "close";
+     default:

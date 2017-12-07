@@ -1,0 +1,3020 @@
+diff --git a/skia/BUILD.gn b/skia/BUILD.gn
+index 1e482fa..c0477a6 100644
+--- a/skia/BUILD.gn
++++ b/skia/BUILD.gn
+@@ -45,10 +45,6 @@
+     "//third_party/skia/third_party/vulkan",
+   ]
+ 
+-  if (!is_ios) {
+-    include_dirs += [ "//third_party/skia/include/codec" ]
+-  }
+-
+   defines = skia_for_chromium_defines
+   defines += [
+     "SK_HAS_PNG_LIBRARY",
+@@ -285,39 +281,16 @@
+     "//third_party/skia/src/images/SkPngEncoder.cpp",
+     "//third_party/skia/src/images/SkWebpEncoder.cpp",
+     "//third_party/skia/src/ports/SkGlobalInitialization_default.cpp",
++    "//third_party/skia/src/ports/SkImageGenerator_none.cpp",
+     "//third_party/skia/src/ports/SkOSFile_stdio.cpp",
+     "//third_party/skia/src/sfnt/SkOTTable_name.cpp",
+     "//third_party/skia/src/sfnt/SkOTUtils.cpp",
+   ]
+   if (!is_ios) {
+     sources += [
+-      "//third_party/skia/src/codec/SkBmpBaseCodec.cpp",
+-      "//third_party/skia/src/codec/SkBmpCodec.cpp",
+-      "//third_party/skia/src/codec/SkBmpMaskCodec.cpp",
+-      "//third_party/skia/src/codec/SkBmpRLECodec.cpp",
+-      "//third_party/skia/src/codec/SkBmpStandardCodec.cpp",
+-      "//third_party/skia/src/codec/SkCodec.cpp",
+-      "//third_party/skia/src/codec/SkCodecImageGenerator.cpp",
+-      "//third_party/skia/src/codec/SkGifCodec.cpp",
+-      "//third_party/skia/src/codec/SkIcoCodec.cpp",
+-      "//third_party/skia/src/codec/SkJpegCodec.cpp",
+-      "//third_party/skia/src/codec/SkJpegDecoderMgr.cpp",
+-      "//third_party/skia/src/codec/SkJpegUtility.cpp",
+-      "//third_party/skia/src/codec/SkMaskSwizzler.cpp",
+-      "//third_party/skia/src/codec/SkMasks.cpp",
+-      "//third_party/skia/src/codec/SkPngCodec.cpp",
+-      "//third_party/skia/src/codec/SkSampler.cpp",
+-      "//third_party/skia/src/codec/SkStreamBuffer.cpp",
+-      "//third_party/skia/src/codec/SkSwizzler.cpp",
+-      "//third_party/skia/src/codec/SkWbmpCodec.cpp",
+-      "//third_party/skia/src/codec/SkWebpCodec.cpp",
+       "//third_party/skia/src/images/SkJPEGWriteUtility.cpp",
+       "//third_party/skia/src/images/SkJpegEncoder.cpp",
+-      "//third_party/skia/src/ports/SkImageGenerator_skia.cpp",
+-      "//third_party/skia/third_party/gif/SkGifImageReader.cpp",
+     ]
+-  } else {
+-    sources += [ "//third_party/skia/src/ports/SkImageGenerator_none.cpp" ]
+   }
+ 
+   # This and skia_opts are really the same conceptual target so share headers.
+diff --git a/third_party/WebKit/Source/platform/BUILD.gn b/third_party/WebKit/Source/platform/BUILD.gn
+index dcd384e..de62e8f 100644
+--- a/third_party/WebKit/Source/platform/BUILD.gn
++++ b/third_party/WebKit/Source/platform/BUILD.gn
+@@ -1180,14 +1180,14 @@
+     "image-decoders/ImageFrame.h",
+     "image-decoders/SegmentReader.cpp",
+     "image-decoders/SegmentReader.h",
+-    "image-decoders/SegmentStream.cpp",
+-    "image-decoders/SegmentStream.h",
+     "image-decoders/bmp/BMPImageDecoder.cpp",
+     "image-decoders/bmp/BMPImageDecoder.h",
+     "image-decoders/bmp/BMPImageReader.cpp",
+     "image-decoders/bmp/BMPImageReader.h",
+     "image-decoders/gif/GIFImageDecoder.cpp",
+     "image-decoders/gif/GIFImageDecoder.h",
++    "image-decoders/gif/GIFImageReader.cpp",
++    "image-decoders/gif/GIFImageReader.h",
+     "image-decoders/ico/ICOImageDecoder.cpp",
+     "image-decoders/ico/ICOImageDecoder.h",
+     "image-decoders/jpeg/JPEGImageDecoder.cpp",
+@@ -1850,7 +1850,6 @@
+     "image-decoders/ImageDecoderTest.cpp",
+     "image-decoders/ImageDecoderTestHelpers.cpp",
+     "image-decoders/ImageDecoderTestHelpers.h",
+-    "image-decoders/SegmentStreamTest.cpp",
+     "image-decoders/bmp/BMPImageDecoderTest.cpp",
+     "image-decoders/gif/GIFImageDecoderTest.cpp",
+     "image-decoders/ico/ICOImageDecoderTest.cpp",
+diff --git a/third_party/WebKit/Source/platform/image-decoders/ImageDecoder.h b/third_party/WebKit/Source/platform/image-decoders/ImageDecoder.h
+index e440c80..dc40551 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/ImageDecoder.h
++++ b/third_party/WebKit/Source/platform/image-decoders/ImageDecoder.h
+@@ -253,6 +253,15 @@
+   // Callers may pass WTF::kNotFound to clear all frames.
+   // Note: If |frame_buffer_cache_| contains only one frame, it won't be
+   // cleared. Returns the number of bytes of frame data actually cleared.
++  //
++  // This is a virtual method because MockImageDecoder needs to override it in
++  // order to run the test ImageFrameGeneratorTest::ClearMultiFrameDecode.
++  //
++  // @TODO  Let MockImageDecoder override ImageFrame::ClearFrameBuffer instead,
++  //        so this method can be made non-virtual. It is used in the test
++  //        ImageFrameGeneratorTest::ClearMultiFrameDecode. The test needs to
++  //        be modified since two frames may be kept in cache, instead of
++  //        always just one, with this ClearCacheExceptFrame implementation.
+   virtual size_t ClearCacheExceptFrame(size_t);
+ 
+   // If the image has a cursor hot-spot, stores it in the argument
+@@ -392,9 +401,7 @@
+   // |index| is smaller than |frame_buffer_cache_|.size().
+   virtual bool FrameStatusSufficientForSuccessors(size_t index) {
+     DCHECK(index < frame_buffer_cache_.size());
+-    ImageFrame::Status frame_status = frame_buffer_cache_[index].GetStatus();
+-    return frame_status == ImageFrame::kFramePartial ||
+-           frame_status == ImageFrame::kFrameComplete;
++    return frame_buffer_cache_[index].GetStatus() != ImageFrame::kFrameEmpty;
+   }
+ 
+  private:
+diff --git a/third_party/WebKit/Source/platform/image-decoders/ImageFrame.cpp b/third_party/WebKit/Source/platform/image-decoders/ImageFrame.cpp
+index cfda667..99c7821 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/ImageFrame.cpp
++++ b/third_party/WebKit/Source/platform/image-decoders/ImageFrame.cpp
+@@ -82,12 +82,8 @@
+   has_alpha_ = other.has_alpha_;
+   bitmap_.reset();
+   SkImageInfo info = other.bitmap_.info();
+-  if (!bitmap_.tryAllocPixels(info)) {
+-    return false;
+-  }
+-
+-  status_ = kFrameAllocated;
+-  return other.bitmap_.readPixels(info, bitmap_.getPixels(), bitmap_.rowBytes(),
++  return bitmap_.tryAllocPixels(info) &&
++         other.bitmap_.readPixels(info, bitmap_.getPixels(), bitmap_.rowBytes(),
+                                   0, 0);
+ }
+ 
+@@ -102,7 +98,6 @@
+   bitmap_.reset();
+   bitmap_.swap(other->bitmap_);
+   other->status_ = kFrameEmpty;
+-  status_ = kFrameAllocated;
+   return true;
+ }
+ 
+@@ -116,11 +111,7 @@
+       new_width, new_height,
+       premultiply_alpha_ ? kPremul_SkAlphaType : kUnpremul_SkAlphaType,
+       std::move(color_space)));
+-  bool allocated = bitmap_.tryAllocPixels(allocator_);
+-  if (allocated)
+-    status_ = kFrameAllocated;
+-
+-  return allocated;
++  return bitmap_.tryAllocPixels(allocator_);
+ }
+ 
+ bool ImageFrame::HasAlpha() const {
+diff --git a/third_party/WebKit/Source/platform/image-decoders/ImageFrame.h b/third_party/WebKit/Source/platform/image-decoders/ImageFrame.h
+index 2af8752..ba6fb6f 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/ImageFrame.h
++++ b/third_party/WebKit/Source/platform/image-decoders/ImageFrame.h
+@@ -46,7 +46,7 @@
+   DISALLOW_NEW_EXCEPT_PLACEMENT_NEW();
+ 
+  public:
+-  enum Status { kFrameEmpty, kFrameAllocated, kFramePartial, kFrameComplete };
++  enum Status { kFrameEmpty, kFramePartial, kFrameComplete };
+   enum DisposalMethod {
+     // If you change the numeric values of these, make sure you audit
+     // all users, as some users may cast raw values to/from these
+diff --git a/third_party/WebKit/Source/platform/image-decoders/SegmentStream.cpp b/third_party/WebKit/Source/platform/image-decoders/SegmentStream.cpp
+deleted file mode 100644
+index 3ac63a1..0000000
+--- a/third_party/WebKit/Source/platform/image-decoders/SegmentStream.cpp
++++ /dev/null
+@@ -1,102 +0,0 @@
+-// Copyright (c) 2017 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-#include "platform/image-decoders/SegmentStream.h"
+-#include <utility>
+-#include "platform/image-decoders/SegmentReader.h"
+-
+-namespace blink {
+-
+-SegmentStream::SegmentStream() = default;
+-
+-SegmentStream::SegmentStream(SegmentStream&& rhs)
+-    : reader_(std::move(rhs.reader_)), position_(rhs.position_) {}
+-
+-SegmentStream& SegmentStream::operator=(SegmentStream&& rhs) {
+-  reader_ = std::move(rhs.reader_);
+-  position_ = rhs.position_;
+-
+-  return *this;
+-}
+-
+-SegmentStream::~SegmentStream() = default;
+-
+-void SegmentStream::SetReader(WTF::RefPtr<SegmentReader> reader) {
+-  reader_ = std::move(reader);
+-}
+-
+-bool SegmentStream::IsCleared() const {
+-  return !reader_ || position_ > reader_->size();
+-}
+-
+-size_t SegmentStream::read(void* buffer, size_t size) {
+-  DCHECK(!IsCleared());
+-
+-  size = std::min(size, reader_->size() - position_);
+-
+-  size_t bytes_advanced = 0;
+-  if (!buffer) {  // skipping, not reading
+-    bytes_advanced = size;
+-  } else {
+-    bytes_advanced = peek(buffer, size);
+-  }
+-
+-  position_ += bytes_advanced;
+-
+-  return bytes_advanced;
+-}
+-
+-size_t SegmentStream::peek(void* buffer, size_t size) const {
+-  DCHECK(!IsCleared());
+-
+-  size = std::min(size, reader_->size() - position_);
+-
+-  size_t total_bytes_peeked = 0;
+-  char* buffer_as_char_ptr = reinterpret_cast<char*>(buffer);
+-  while (size) {
+-    const char* segment = nullptr;
+-    size_t bytes_peeked =
+-        reader_->GetSomeData(segment, position_ + total_bytes_peeked);
+-    if (!bytes_peeked)
+-      break;
+-    if (bytes_peeked > size)
+-      bytes_peeked = size;
+-
+-    memcpy(buffer_as_char_ptr, segment, bytes_peeked);
+-    buffer_as_char_ptr += bytes_peeked;
+-    size -= bytes_peeked;
+-    total_bytes_peeked += bytes_peeked;
+-  }
+-
+-  return total_bytes_peeked;
+-}
+-
+-bool SegmentStream::isAtEnd() const {
+-  return !reader_ || position_ >= reader_->size();
+-}
+-
+-bool SegmentStream::rewind() {
+-  position_ = 0;
+-  return true;
+-}
+-
+-bool SegmentStream::seek(size_t position) {
+-  position_ = position;
+-  return true;
+-}
+-
+-bool SegmentStream::move(long offset) {
+-  DCHECK_GT(offset, 0);
+-  position_ += offset;
+-  return true;
+-}
+-
+-size_t SegmentStream::getLength() const {
+-  if (reader_)
+-    return reader_->size();
+-
+-  return 0;
+-}
+-
+-}  // namespace blink
+diff --git a/third_party/WebKit/Source/platform/image-decoders/SegmentStream.h b/third_party/WebKit/Source/platform/image-decoders/SegmentStream.h
+deleted file mode 100644
+index 37359e6..0000000
+--- a/third_party/WebKit/Source/platform/image-decoders/SegmentStream.h
++++ /dev/null
+@@ -1,51 +0,0 @@
+-// Copyright (c) 2017 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-#ifndef SegmentStream_h
+-#define SegmentStream_h
+-
+-#include <algorithm>
+-#include "platform/PlatformExport.h"
+-#include "platform/wtf/RefPtr.h"
+-#include "third_party/skia/include/core/SkStream.h"
+-
+-namespace blink {
+-
+-class SegmentReader;
+-
+-class PLATFORM_EXPORT SegmentStream : public SkStream {
+- public:
+-  SegmentStream();
+-  SegmentStream(const SegmentStream&) = delete;
+-  SegmentStream& operator=(const SegmentStream&) = delete;
+-  SegmentStream(SegmentStream&&);
+-  SegmentStream& operator=(SegmentStream&&);
+-
+-  ~SegmentStream() override;
+-
+-  void SetReader(WTF::RefPtr<SegmentReader>);
+-  // If a buffer has shrunk beyond the point we have read, it has been cleared.
+-  // This allows clients to be aware of when data suddenly disappears.
+-  bool IsCleared() const;
+-
+-  // From SkStream:
+-  size_t read(void* buffer, size_t) override;
+-  size_t peek(void* buffer, size_t) const override;
+-  bool isAtEnd() const override;
+-  bool rewind() override;
+-  bool hasPosition() const override { return true; }
+-  size_t getPosition() const override { return position_; }
+-  bool seek(size_t position) override;
+-  bool move(long offset) override;
+-  bool hasLength() const override { return true; }
+-  size_t getLength() const override;
+-
+- private:
+-  WTF::RefPtr<SegmentReader> reader_;
+-  size_t position_ = 0;
+-};
+-
+-}  // namespace blink
+-
+-#endif
+diff --git a/third_party/WebKit/Source/platform/image-decoders/SegmentStreamTest.cpp b/third_party/WebKit/Source/platform/image-decoders/SegmentStreamTest.cpp
+deleted file mode 100644
+index 180a728e..0000000
+--- a/third_party/WebKit/Source/platform/image-decoders/SegmentStreamTest.cpp
++++ /dev/null
+@@ -1,702 +0,0 @@
+-// Copyright (c) 2017 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-#include "platform/image-decoders/SegmentStream.h"
+-
+-#include <array>
+-#include <memory>
+-#include "platform/SharedBuffer.h"
+-#include "platform/image-decoders/SegmentReader.h"
+-#include "platform/wtf/PtrUtil.h"
+-#include "testing/gtest/include/gtest/gtest.h"
+-
+-// SegmentStream has 4 accessors which do not alter state:
+-// - isCleared()
+-// - isAtEnd()
+-// - getPosition()
+-// - getLength()
+-//
+-// For every operation which changes state we can test:
+-// - the operation completed as expected,
+-// - the accessors did not change, and/or
+-// - the accessors changed in the way we expected.
+-//
+-// There are actually 2 more accessors:
+-// - hasPosition()
+-// - hasLength()
+-// but these should always return true to indicate that we can call getLength()
+-// for example. So let's not add them to every state changing operation and add
+-// needless complexity.
+-
+-namespace {
+-
+-constexpr size_t kBufferAllocationSize = 20;
+-constexpr size_t kInsideBufferPosition = 10;
+-constexpr size_t kPastEndOfBufferPosition = 30;
+-
+-testing::AssertionResult IsCleared(const blink::SegmentStream&);
+-testing::AssertionResult IsAtEnd(const blink::SegmentStream&);
+-testing::AssertionResult PositionIsZero(const blink::SegmentStream&);
+-testing::AssertionResult PositionIsInsideBuffer(const blink::SegmentStream&);
+-testing::AssertionResult PositionIsAtEndOfBuffer(const blink::SegmentStream&);
+-testing::AssertionResult LengthIsZero(const blink::SegmentStream&);
+-testing::AssertionResult LengthIsAllocationSize(const blink::SegmentStream&);
+-
+-// Many of these tests require a SegmentStream with populated data.
+-//
+-// This function creates a buffer of size |kBufferAllocationSize| and prepares
+-// a SegmentStream with that buffer.
+-// This also populates other properties such as the length, cleared state, etc.
+-blink::SegmentStream CreatePopulatedSegmentStream();
+-
+-// This function creates a buffer of size |kBufferAllocationSize| to be used
+-// when populating a SegmentStream.
+-WTF::RefPtr<blink::SegmentReader> CreateSegmentReader();
+-
+-size_t ReadFromSegmentStream(blink::SegmentStream&,
+-                             size_t amount_to_read = kInsideBufferPosition);
+-size_t PeekIntoSegmentStream(blink::SegmentStream&,
+-                             size_t amount_to_peek = kInsideBufferPosition);
+-
+-}  // namespace
+-
+-namespace blink {
+-
+-TEST(SegmentStreamTest, DefaultConstructorShouldSetIsCleared) {
+-  SegmentStream segment_stream;
+-
+-  ASSERT_TRUE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, DefaultConstructorShouldSetIsAtEnd) {
+-  SegmentStream segment_stream;
+-
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, DefaultContructorShouldClearPosition) {
+-  SegmentStream segment_stream;
+-
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, DefaultConstructorShouldHaveZeroLength) {
+-  SegmentStream segment_stream;
+-
+-  ASSERT_TRUE(LengthIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveConstructorShouldSetIsClearedWhenRhsIsCleared) {
+-  SegmentStream cleared_segment_stream;
+-  ASSERT_TRUE(IsCleared(cleared_segment_stream));
+-
+-  SegmentStream move_constructed_segment_stream =
+-      std::move(cleared_segment_stream);
+-
+-  ASSERT_TRUE(IsCleared(move_constructed_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest,
+-     MoveConstructorShouldUnsetIsClearedWhenRhsIsNotCleared) {
+-  SegmentStream uncleared_segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsCleared(uncleared_segment_stream));
+-
+-  SegmentStream move_constructed_segment_stream =
+-      std::move(uncleared_segment_stream);
+-
+-  ASSERT_FALSE(IsCleared(move_constructed_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveConstructorShouldSetIsAtEndWhenRhsIsAtEnd) {
+-  SegmentStream at_end_segment_stream;
+-  ASSERT_TRUE(IsAtEnd(at_end_segment_stream));
+-
+-  SegmentStream move_constructed_segment_stream =
+-      std::move(at_end_segment_stream);
+-
+-  ASSERT_TRUE(IsAtEnd(move_constructed_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveConstructorShouldUnsetIsAtEndWhenRhsIsNotAtEnd) {
+-  SegmentStream not_at_end_segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(not_at_end_segment_stream));
+-
+-  SegmentStream move_constructed_segment_stream =
+-      std::move(not_at_end_segment_stream);
+-
+-  ASSERT_FALSE(IsAtEnd(move_constructed_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveContructorShouldCopyRhsPosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  segment_stream.seek(kInsideBufferPosition);
+-  ASSERT_EQ(kInsideBufferPosition, segment_stream.getPosition());
+-
+-  SegmentStream move_constructed_segment_stream = std::move(segment_stream);
+-
+-  ASSERT_EQ(kInsideBufferPosition,
+-            move_constructed_segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, MoveConstructorShouldCopyRhsLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-
+-  SegmentStream move_constructed_segment_stream = std::move(segment_stream);
+-
+-  ASSERT_EQ(kBufferAllocationSize, move_constructed_segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest,
+-     MoveAssignmentOperatorShouldSetIsClearedWhenRhsIsCleared) {
+-  SegmentStream cleared_segment_stream;
+-  ASSERT_TRUE(IsCleared(cleared_segment_stream));
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(cleared_segment_stream);
+-
+-  ASSERT_TRUE(IsCleared(move_assigned_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest,
+-     MoveAssignmentOperatorShouldUnsetIsClearedWhenRhsIsNotCleared) {
+-  SegmentStream uncleared_segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsCleared(uncleared_segment_stream));
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(uncleared_segment_stream);
+-
+-  ASSERT_FALSE(IsCleared(move_assigned_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveAssignmentOperatorShouldSetIsAtEndWhenRhsIsAtEnd) {
+-  SegmentStream at_end_segment_stream;
+-  ASSERT_TRUE(IsAtEnd(at_end_segment_stream));
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(at_end_segment_stream);
+-
+-  ASSERT_TRUE(IsAtEnd(move_assigned_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest,
+-     MoveAssignmentOperatorShouldUnsetIsAtEndWhenRhsIsNotAtEnd) {
+-  SegmentStream not_at_end_segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(not_at_end_segment_stream));
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(not_at_end_segment_stream);
+-
+-  ASSERT_FALSE(IsAtEnd(move_assigned_segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveAssignmentOperatorShouldCopyRhsPosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  segment_stream.seek(kInsideBufferPosition);
+-  ASSERT_EQ(kInsideBufferPosition, segment_stream.getPosition());
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(segment_stream);
+-
+-  ASSERT_EQ(kInsideBufferPosition, move_assigned_segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, MoveAssignmentOperatorShouldCopyRhsLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-
+-  SegmentStream move_assigned_segment_stream;
+-  move_assigned_segment_stream = std::move(segment_stream);
+-
+-  ASSERT_EQ(kBufferAllocationSize, move_assigned_segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldUnsetIsCleared) {
+-  SegmentStream segment_stream;
+-  WTF::RefPtr<SegmentReader> segment_reader = CreateSegmentReader();
+-  ASSERT_TRUE(IsCleared(segment_stream));
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldUnsetIsAtEnd) {
+-  SegmentStream segment_stream;
+-  WTF::RefPtr<SegmentReader> segment_reader = CreateSegmentReader();
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldNotChangePosition) {
+-  SegmentStream segment_stream;
+-  WTF::RefPtr<SegmentReader> segment_reader = CreateSegmentReader();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldUpdateLength) {
+-  SegmentStream segment_stream;
+-  WTF::RefPtr<SegmentReader> segment_reader = CreateSegmentReader();
+-  ASSERT_FALSE(LengthIsAllocationSize(segment_stream));
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_TRUE(LengthIsAllocationSize(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldSetIsClearedWhenSetToNull) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-
+-  segment_stream.SetReader(nullptr);
+-
+-  ASSERT_TRUE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldSetIsClearedWhenReaderSizeNotBigEnough) {
+-  SegmentStream segment_stream;
+-  segment_stream.seek(kPastEndOfBufferPosition);
+-  RefPtr<blink::SegmentReader> segment_reader = CreateSegmentReader();
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_TRUE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldSetIsAtEndWhenReaderSizeNotBigEnough) {
+-  SegmentStream segment_stream;
+-  segment_stream.seek(kPastEndOfBufferPosition);
+-  RefPtr<blink::SegmentReader> segment_reader = CreateSegmentReader();
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest,
+-     SetReaderShouldNotChangePositionWhenReaderSizeNotBigEnough) {
+-  SegmentStream segment_stream;
+-  segment_stream.seek(kPastEndOfBufferPosition);
+-  RefPtr<blink::SegmentReader> segment_reader = CreateSegmentReader();
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_EQ(kPastEndOfBufferPosition, segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldChangeLengthWhenReaderSizeNotBigEnough) {
+-  SegmentStream segment_stream;
+-  segment_stream.seek(kPastEndOfBufferPosition);
+-  RefPtr<blink::SegmentReader> segment_reader = CreateSegmentReader();
+-
+-  segment_stream.SetReader(segment_reader);
+-
+-  ASSERT_TRUE(LengthIsAllocationSize(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldSetIsAtEndWhenSetToNull) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  segment_stream.SetReader(nullptr);
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldNotChangePositionWhenSetToNull) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  const size_t amount_read = ReadFromSegmentStream(segment_stream);
+-  ASSERT_EQ(kInsideBufferPosition, amount_read);
+-  const size_t pre_nulled_position = segment_stream.getPosition();
+-  ASSERT_EQ(kInsideBufferPosition, pre_nulled_position);
+-
+-  segment_stream.SetReader(nullptr);
+-
+-  ASSERT_EQ(kInsideBufferPosition, segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, SetReaderShouldClearLengthWhenSetToNull) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(LengthIsZero(segment_stream));
+-
+-  segment_stream.SetReader(nullptr);
+-
+-  ASSERT_TRUE(LengthIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldConsumeBuffer) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  const size_t amount_read = ReadFromSegmentStream(segment_stream);
+-
+-  ASSERT_EQ(kInsideBufferPosition, amount_read);
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldNotClear) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  ReadFromSegmentStream(segment_stream);
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldUpdateIsAtEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  ReadFromSegmentStream(segment_stream, kBufferAllocationSize);
+-
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldUpdatePosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  ReadFromSegmentStream(segment_stream);
+-
+-  ASSERT_TRUE(PositionIsInsideBuffer(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldNotChangeLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-
+-  ReadFromSegmentStream(segment_stream);
+-
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldConsumeBufferWithoutGoingPastTheEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  const size_t amount_read =
+-      ReadFromSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_EQ(kBufferAllocationSize, amount_read);
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldSetIsAtEndWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  ReadFromSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, ReadShouldTruncatePositionWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  ReadFromSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_TRUE(PositionIsAtEndOfBuffer(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldConsumeBuffer) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  const size_t amount_peeked = PeekIntoSegmentStream(segment_stream);
+-
+-  ASSERT_EQ(kInsideBufferPosition, amount_peeked);
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotClear) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  PeekIntoSegmentStream(segment_stream);
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotUpdateIsAtEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  PeekIntoSegmentStream(segment_stream, kBufferAllocationSize);
+-
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotUpdatePosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  PeekIntoSegmentStream(segment_stream);
+-
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotChangeLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  PeekIntoSegmentStream(segment_stream);
+-
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldConsumeBufferWithoutGoingPastTheEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  const size_t amount_peeked =
+-      PeekIntoSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_EQ(kBufferAllocationSize, amount_peeked);
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotSetIsAtEndWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  PeekIntoSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, PeekShouldNotTruncatePositionWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  PeekIntoSegmentStream(segment_stream, kPastEndOfBufferPosition);
+-
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, RewindShouldNotClear) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ReadFromSegmentStream(segment_stream);
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-
+-  segment_stream.rewind();
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, RewindShouldNotSetAtEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ReadFromSegmentStream(segment_stream);
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  segment_stream.rewind();
+-
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, RewindShouldResetPosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ReadFromSegmentStream(segment_stream);
+-  ASSERT_TRUE(PositionIsInsideBuffer(segment_stream));
+-
+-  segment_stream.rewind();
+-
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, RewindShouldNotChangeLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ReadFromSegmentStream(segment_stream);
+-
+-  segment_stream.rewind();
+-
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest, HasPositionShouldBeSupported) {
+-  blink::SegmentStream segment_stream;
+-
+-  ASSERT_TRUE(segment_stream.hasPosition());
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldNotSetIsCleared) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-
+-  segment_stream.seek(kInsideBufferPosition);
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldNotSetIsAtEndWhenSeekingInsideTheBuffer) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  segment_stream.seek(kInsideBufferPosition);
+-
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldSetIsAtEndWhenSeekingToTheEndOfTheBuffer) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_FALSE(IsAtEnd(segment_stream));
+-
+-  segment_stream.seek(kBufferAllocationSize);
+-
+-  ASSERT_TRUE(IsAtEnd(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldUpdatePosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  segment_stream.seek(kInsideBufferPosition);
+-
+-  ASSERT_EQ(kInsideBufferPosition, segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldNotTruncatePositionWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  segment_stream.seek(kPastEndOfBufferPosition);
+-
+-  ASSERT_EQ(kPastEndOfBufferPosition, segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, SeekShouldNotUpdateLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  segment_stream.seek(kInsideBufferPosition);
+-
+-  ASSERT_EQ(kBufferAllocationSize, segment_stream.getLength());
+-}
+-
+-TEST(SegmentStreamTest, MoveShouldNotSetCleared) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-
+-  segment_stream.move(kInsideBufferPosition);
+-
+-  ASSERT_FALSE(IsCleared(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveShouldUpdatePosition) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  segment_stream.move(kInsideBufferPosition);
+-
+-  ASSERT_TRUE(PositionIsInsideBuffer(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, MoveShouldNotTruncatePositionWhenPastEnd) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(PositionIsZero(segment_stream));
+-
+-  segment_stream.move(kPastEndOfBufferPosition);
+-
+-  ASSERT_EQ(kPastEndOfBufferPosition, segment_stream.getPosition());
+-}
+-
+-TEST(SegmentStreamTest, MoveShouldNotChangeLength) {
+-  SegmentStream segment_stream = CreatePopulatedSegmentStream();
+-  ASSERT_TRUE(LengthIsAllocationSize(segment_stream));
+-
+-  segment_stream.move(kInsideBufferPosition);
+-
+-  ASSERT_TRUE(LengthIsAllocationSize(segment_stream));
+-}
+-
+-TEST(SegmentStreamTest, HasLengthShouldBeSupported) {
+-  blink::SegmentStream segment_stream;
+-  ASSERT_TRUE(segment_stream.hasLength());
+-}
+-
+-}  // namespace blink
+-
+-namespace {
+-
+-testing::AssertionResult IsCleared(const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.IsCleared())
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure() << "SegmentStream is not clear";
+-}
+-
+-testing::AssertionResult IsAtEnd(const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.isAtEnd())
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure() << "SegmentStream is not at the end";
+-}
+-
+-testing::AssertionResult PositionIsZero(
+-    const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.getPosition() == 0ul)
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure() << "SegmentStream position is not 0";
+-}
+-
+-testing::AssertionResult PositionIsInsideBuffer(
+-    const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.getPosition() == kInsideBufferPosition)
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure()
+-         << "SegmentStream position is not inside the buffer";
+-}
+-
+-testing::AssertionResult PositionIsAtEndOfBuffer(
+-    const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.getPosition() == kBufferAllocationSize)
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure()
+-         << "SegmentStream position is not at the end of the buffer";
+-}
+-
+-testing::AssertionResult LengthIsZero(
+-    const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.getLength() == 0ul)
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure() << "SegmentStream length is not 0";
+-}
+-
+-testing::AssertionResult LengthIsAllocationSize(
+-    const blink::SegmentStream& segment_stream) {
+-  if (segment_stream.getLength() == kBufferAllocationSize)
+-    return testing::AssertionSuccess();
+-
+-  return testing::AssertionFailure()
+-         << "SegmentStream length is not the allocation size";
+-}
+-
+-blink::SegmentStream CreatePopulatedSegmentStream() {
+-  blink::SegmentStream segment_stream;
+-  segment_stream.SetReader(CreateSegmentReader());
+-  return segment_stream;
+-}
+-
+-WTF::RefPtr<blink::SegmentReader> CreateSegmentReader() {
+-  std::array<char, kBufferAllocationSize> raw_buffer;
+-
+-  WTF::RefPtr<blink::SharedBuffer> shared_buffer =
+-      blink::SharedBuffer::Create(raw_buffer.data(), kBufferAllocationSize);
+-
+-  WTF::RefPtr<blink::SegmentReader> segment_reader =
+-      blink::SegmentReader::CreateFromSharedBuffer(std::move(shared_buffer));
+-
+-  return segment_reader;
+-}
+-
+-size_t ReadFromSegmentStream(blink::SegmentStream& segment_stream,
+-                             size_t amount_to_read) {
+-  std::array<char, kBufferAllocationSize> read_buffer;
+-  return segment_stream.read(read_buffer.data(), amount_to_read);
+-}
+-
+-size_t PeekIntoSegmentStream(blink::SegmentStream& segment_stream,
+-                             size_t amount_to_peek) {
+-  std::array<char, kBufferAllocationSize> peek_buffer;
+-  return segment_stream.peek(peek_buffer.data(), amount_to_peek);
+-}
+-
+-}  // namespace
+diff --git a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.cpp b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.cpp
+index a765a78..1879171 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.cpp
++++ b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.cpp
+@@ -27,9 +27,8 @@
+ 
+ #include <limits>
+ #include <memory>
+-#include "platform/image-decoders/SegmentStream.h"
++#include "platform/image-decoders/gif/GIFImageReader.h"
+ #include "platform/wtf/NotFound.h"
+-#include "third_party/skia/include/core/SkImageInfo.h"
+ 
+ namespace blink {
+ 
+@@ -37,306 +36,248 @@
+                                  const ColorBehavior& color_behavior,
+                                  size_t max_decoded_bytes)
+     : ImageDecoder(alpha_option, color_behavior, max_decoded_bytes),
+-      codec_(),
+-      segment_stream_(nullptr),
+-      prior_frame_(SkCodec::kNone) {}
++      repetition_count_(kAnimationLoopOnce) {}
+ 
+-GIFImageDecoder::~GIFImageDecoder() = default;
++GIFImageDecoder::~GIFImageDecoder() {}
+ 
+ void GIFImageDecoder::OnSetData(SegmentReader* data) {
+-  if (!data) {
+-    if (segment_stream_)
+-      segment_stream_->SetReader(nullptr);
+-    return;
+-  }
+-
+-  std::unique_ptr<SegmentStream> segment_stream;
+-  if (!segment_stream_) {
+-    segment_stream = std::make_unique<SegmentStream>();
+-    segment_stream_ = segment_stream.get();
+-  }
+-
+-  segment_stream_->SetReader(std::move(data));
+-
+-  if (!codec_) {
+-    SkCodec::Result codec_creation_result;
+-    codec_ = SkCodec::MakeFromStream(std::move(segment_stream),
+-                                     &codec_creation_result, nullptr);
+-    switch (codec_creation_result) {
+-      case SkCodec::kSuccess: {
+-        // SkCodec::MakeFromStream will read enough of the image to get the
+-        // image size.
+-        SkImageInfo image_info = codec_->getInfo();
+-        SetSize(image_info.width(), image_info.height());
+-        return;
+-      }
+-      case SkCodec::kIncompleteInput:
+-        // |segment_stream_|'s ownership is passed into MakeFromStream.
+-        // It is deleted if MakeFromStream fails.
+-        // If MakeFromStream fails, we set |segment_stream_| to null so
+-        // we aren't pointing to reclaimed memory.
+-        segment_stream_ = nullptr;
+-        return;
+-      default:
+-        SetFailed();
+-        return;
+-    }
+-  }
++  if (reader_)
++    reader_->SetData(data);
+ }
+ 
+ int GIFImageDecoder::RepetitionCount() const {
+-  if (!codec_ || segment_stream_->IsCleared())
+-    return repetition_count_;
+-
+-  DCHECK(!Failed());
+-
+   // This value can arrive at any point in the image data stream.  Most GIFs
+   // in the wild declare it near the beginning of the file, so it usually is
+   // set by the time we've decoded the size, but (depending on the GIF and the
+-  // packets sent back by the webserver) not always.
++  // packets sent back by the webserver) not always.  If the reader hasn't
++  // seen a loop count yet, it will return kCLoopCountNotSeen, in which case we
++  // should default to looping once (the initial value for
++  // |repetition_count_|).
+   //
+-  // SkCodec will parse forward in the file if the repetition count has not
+-  // been seen yet.
+-  int repetition_count = codec_->getRepetitionCount();
+-
+-  switch (repetition_count) {
+-    case 0: {
+-      // SkCodec returns 0 for both still images and animated images which
+-      // only play once.
+-      if (IsAllDataReceived() && codec_->getFrameCount() == 1) {
+-        repetition_count_ = kAnimationNone;
+-        break;
+-      }
+-
+-      repetition_count_ = kAnimationLoopOnce;
+-      break;
+-    }
+-    case SkCodec::kRepetitionCountInfinite:
+-      repetition_count_ = kAnimationLoopInfinite;
+-      break;
+-    default:
+-      repetition_count_ = repetition_count;
+-      break;
+-  }
+-
++  // There are some additional wrinkles here. First, ImageSource::Clear()
++  // may destroy the reader, making the result from the reader _less_
++  // authoritative on future calls if the recreated reader hasn't seen the
++  // loop count.  We don't need to special-case this because in this case the
++  // new reader will once again return kCLoopCountNotSeen, and we won't
++  // overwrite the cached correct value.
++  //
++  // Second, a GIF might never set a loop count at all, in which case we
++  // should continue to treat it as a "loop once" animation.  We don't need
++  // special code here either, because in this case we'll never change
++  // |repetition_count_| from its default value.
++  //
++  // Third, we use the same GIFImageReader for counting frames and we might
++  // see the loop count and then encounter a decoding error which happens
++  // later in the stream. It is also possible that no frames are in the
++  // stream. In these cases we should just loop once.
++  if (IsAllDataReceived() && ParseCompleted() && reader_->ImagesCount() == 1)
++    repetition_count_ = kAnimationNone;
++  else if (Failed() || (reader_ && (!reader_->ImagesCount())))
++    repetition_count_ = kAnimationLoopOnce;
++  else if (reader_ && reader_->LoopCount() != kCLoopCountNotSeen)
++    repetition_count_ = reader_->LoopCount();
+   return repetition_count_;
+ }
+ 
+ bool GIFImageDecoder::FrameIsReceivedAtIndex(size_t index) const {
+-  SkCodec::FrameInfo frame_info;
+-  if (!codec_ || !codec_->getFrameInfo(index, &frame_info))
+-    return false;
+-  return frame_info.fFullyReceived;
++  return reader_ && (index < reader_->ImagesCount()) &&
++         reader_->FrameContext(index)->IsComplete();
+ }
+ 
+ TimeDelta GIFImageDecoder::FrameDurationAtIndex(size_t index) const {
+-  if (index < frame_buffer_cache_.size())
+-    return frame_buffer_cache_[index].Duration();
+-  return TimeDelta();
++  return (reader_ && (index < reader_->ImagesCount()) &&
++          reader_->FrameContext(index)->IsHeaderDefined())
++             ? TimeDelta::FromMilliseconds(
++                   reader_->FrameContext(index)->DelayTime())
++             : TimeDelta();
+ }
+ 
+ bool GIFImageDecoder::SetFailed() {
+-  segment_stream_ = nullptr;
+-  codec_.reset();
++  reader_.reset();
+   return ImageDecoder::SetFailed();
+ }
+ 
+-size_t GIFImageDecoder::ClearCacheExceptFrame(size_t index) {
+-  // SkCodec attempts to report the earliest possible required frame, but it is
+-  // possible that frame has been evicted, while a later frame (which could also
+-  // be used as the required frame) is still cached. Try to preserve a frame
+-  // that is still cached.
+-  if (frame_buffer_cache_.size() <= 1)
+-    return 0;
++bool GIFImageDecoder::HaveDecodedRow(size_t frame_index,
++                                     GIFRow::const_iterator row_begin,
++                                     size_t width,
++                                     size_t row_number,
++                                     unsigned repeat_count,
++                                     bool write_transparent_pixels) {
++  const GIFFrameContext* frame_context = reader_->FrameContext(frame_index);
++  // The pixel data and coordinates supplied to us are relative to the frame's
++  // origin within the entire image size, i.e.
++  // (frameC_context->xOffset, frame_context->yOffset). There is no guarantee
++  // that width == (size().width() - frame_context->xOffset), so
++  // we must ensure we don't run off the end of either the source data or the
++  // row's X-coordinates.
++  const int x_begin = frame_context->XOffset();
++  const int y_begin = frame_context->YOffset() + row_number;
++  const int x_end = std::min(static_cast<int>(frame_context->XOffset() + width),
++                             Size().Width());
++  const int y_end = std::min(
++      static_cast<int>(frame_context->YOffset() + row_number + repeat_count),
++      Size().Height());
++  if (!width || (x_begin < 0) || (y_begin < 0) || (x_end <= x_begin) ||
++      (y_end <= y_begin))
++    return true;
+ 
+-  size_t index2 = kNotFound;
+-  if (index < frame_buffer_cache_.size()) {
+-    const ImageFrame& frame = frame_buffer_cache_[index];
+-    if (frame.RequiredPreviousFrameIndex() != kNotFound &&
+-        (!FrameStatusSufficientForSuccessors(index) ||
+-         frame.GetDisposalMethod() == ImageFrame::kDisposeOverwritePrevious)) {
+-      index2 = GetViableReferenceFrameIndex(index);
++  const GIFColorMap::Table& color_table =
++      frame_context->LocalColorMap().IsDefined()
++          ? frame_context->LocalColorMap().GetTable()
++          : reader_->GlobalColorMap().GetTable();
++
++  if (color_table.IsEmpty())
++    return true;
++
++  GIFColorMap::Table::const_iterator color_table_iter = color_table.begin();
++
++  // Initialize the frame if necessary.
++  ImageFrame& buffer = frame_buffer_cache_[frame_index];
++  if (!InitFrameBuffer(frame_index))
++    return false;
++
++  const size_t transparent_pixel = frame_context->TransparentPixel();
++  GIFRow::const_iterator row_end = row_begin + (x_end - x_begin);
++  ImageFrame::PixelData* current_address = buffer.GetAddr(x_begin, y_begin);
++
++  // We may or may not need to write transparent pixels to the buffer.
++  // If we're compositing against a previous image, it's wrong, and if
++  // we're writing atop a cleared, fully transparent buffer, it's
++  // unnecessary; but if we're decoding an interlaced gif and
++  // displaying it "Haeberli"-style, we must write these for passes
++  // beyond the first, or the initial passes will "show through" the
++  // later ones.
++  //
++  // The loops below are almost identical. One writes a transparent pixel
++  // and one doesn't based on the value of |write_transparent_pixels|.
++  // The condition check is taken out of the loop to enhance performance.
++  // This optimization reduces decoding time by about 15% for a 3MB image.
++  if (write_transparent_pixels) {
++    for (; row_begin != row_end; ++row_begin, ++current_address) {
++      const size_t source_value = *row_begin;
++      if ((source_value != transparent_pixel) &&
++          (source_value < color_table.size())) {
++        *current_address = color_table_iter[source_value];
++      } else {
++        *current_address = 0;
++        current_buffer_saw_alpha_ = true;
++      }
++    }
++  } else {
++    for (; row_begin != row_end; ++row_begin, ++current_address) {
++      const size_t source_value = *row_begin;
++      if ((source_value != transparent_pixel) &&
++          (source_value < color_table.size()))
++        *current_address = color_table_iter[source_value];
++      else
++        current_buffer_saw_alpha_ = true;
+     }
+   }
+ 
+-  return ClearCacheExceptTwoFrames(index, index2);
++  // Tell the frame to copy the row data if need be.
++  if (repeat_count > 1)
++    buffer.CopyRowNTimes(x_begin, x_end, y_begin, y_end);
++
++  buffer.SetPixelsChanged(true);
++  return true;
++}
++
++bool GIFImageDecoder::ParseCompleted() const {
++  return reader_ && reader_->ParseCompleted();
++}
++
++bool GIFImageDecoder::FrameComplete(size_t frame_index) {
++  // Initialize the frame if necessary.  Some GIFs insert do-nothing frames,
++  // in which case we never reach HaveDecodedRow() before getting here.
++  if (!InitFrameBuffer(frame_index))
++    return SetFailed();
++
++  if (!current_buffer_saw_alpha_)
++    CorrectAlphaWhenFrameBufferSawNoAlpha(frame_index);
++
++  frame_buffer_cache_[frame_index].SetStatus(ImageFrame::kFrameComplete);
++
++  return true;
++}
++
++void GIFImageDecoder::ClearFrameBuffer(size_t frame_index) {
++  if (reader_ && frame_buffer_cache_[frame_index].GetStatus() ==
++                     ImageFrame::kFramePartial) {
++    // Reset the state of the partial frame in the reader so that the frame
++    // can be decoded again when requested.
++    reader_->ClearDecodeState(frame_index);
++  }
++  ImageDecoder::ClearFrameBuffer(frame_index);
+ }
+ 
+ size_t GIFImageDecoder::DecodeFrameCount() {
+-  if (!codec_ || segment_stream_->IsCleared())
+-    return frame_buffer_cache_.size();
+-
+-  return codec_->getFrameCount();
++  Parse(kGIFFrameCountQuery);
++  // If decoding fails, |reader_| will have been destroyed.  Instead of
++  // returning 0 in this case, return the existing number of frames.  This way
++  // if we get halfway through the image before decoding fails, we won't
++  // suddenly start reporting that the image has zero frames.
++  return Failed() ? frame_buffer_cache_.size() : reader_->ImagesCount();
+ }
+ 
+ void GIFImageDecoder::InitializeNewFrame(size_t index) {
+-  DCHECK(codec_);
+-
+-  ImageFrame& frame = frame_buffer_cache_[index];
+-  // SkCodec does not inform us if only a portion of the image was updated
+-  // in the current frame. Because of this, rather than correctly filling in
+-  // the frame rect, we set the frame rect to be the image's full size.
+-  // The original frame rect is not used, anyway.
+-  IntSize full_image_size = Size();
+-  frame.SetOriginalFrameRect(IntRect(IntPoint(), full_image_size));
+-
+-  SkCodec::FrameInfo frame_info;
+-  bool frame_info_received = codec_->getFrameInfo(index, &frame_info);
+-  DCHECK(frame_info_received);
+-  frame.SetDuration(TimeDelta::FromMilliseconds(frame_info.fDuration));
+-  size_t required_previous_frame_index;
+-  if (frame_info.fRequiredFrame == SkCodec::kNone) {
+-    required_previous_frame_index = kNotFound;
+-  } else {
+-    required_previous_frame_index =
+-        static_cast<size_t>(frame_info.fRequiredFrame);
+-  }
+-  frame.SetRequiredPreviousFrameIndex(required_previous_frame_index);
+-
+-  ImageFrame::DisposalMethod disposal_method = ImageFrame::kDisposeNotSpecified;
+-  switch (frame_info.fDisposalMethod) {
+-    case SkCodecAnimation::DisposalMethod::kKeep:
+-      disposal_method = ImageFrame::kDisposeKeep;
+-      break;
+-    case SkCodecAnimation::DisposalMethod::kRestoreBGColor:
+-      disposal_method = ImageFrame::kDisposeOverwriteBgcolor;
+-      break;
+-    case SkCodecAnimation::DisposalMethod::kRestorePrevious:
+-      disposal_method = ImageFrame::kDisposeOverwritePrevious;
+-      break;
+-  }
+-  frame.SetDisposalMethod(disposal_method);
++  ImageFrame* buffer = &frame_buffer_cache_[index];
++  const GIFFrameContext* frame_context = reader_->FrameContext(index);
++  buffer->SetOriginalFrameRect(
++      Intersection(frame_context->FrameRect(), IntRect(IntPoint(), Size())));
++  buffer->SetDuration(TimeDelta::FromMilliseconds(frame_context->DelayTime()));
++  buffer->SetDisposalMethod(frame_context->GetDisposalMethod());
++  buffer->SetRequiredPreviousFrameIndex(
++      FindRequiredPreviousFrame(index, false));
+ }
+ 
+ void GIFImageDecoder::Decode(size_t index) {
+-  if (!codec_ || segment_stream_->IsCleared())
++  Parse(kGIFFrameCountQuery);
++
++  if (Failed())
+     return;
+ 
+-  DCHECK(!Failed());
+-
+-  DCHECK_LT(index, frame_buffer_cache_.size());
+-
+   UpdateAggressivePurging(index);
+ 
+-  ImageFrame& frame = frame_buffer_cache_[index];
+-  if (frame.GetStatus() == ImageFrame::kFrameEmpty) {
+-    size_t required_previous_frame_index = frame.RequiredPreviousFrameIndex();
+-    if (required_previous_frame_index == kNotFound) {
+-      frame.AllocatePixelData(Size().Width(), Size().Height(),
+-                              ColorSpaceForSkImages());
+-      frame.ZeroFillPixelData();
+-      prior_frame_ = SkCodec::kNone;
+-    } else {
+-      size_t previous_frame_index = GetViableReferenceFrameIndex(index);
+-      if (previous_frame_index == kNotFound) {
+-        previous_frame_index = required_previous_frame_index;
+-        Decode(previous_frame_index);
+-        if (Failed()) {
+-          return;
+-        }
+-      }
+-
+-      // We try to reuse |previous_frame| as starting state to avoid copying.
+-      // If CanReusePreviousFrameBuffer returns false, we must copy the data
+-      // since |previous_frame| is necessary to decode this or later frames.
+-      // In that case copy the data instead.
+-      ImageFrame& previous_frame = frame_buffer_cache_[previous_frame_index];
+-      if ((!CanReusePreviousFrameBuffer(index) ||
+-           !frame.TakeBitmapDataIfWritable(&previous_frame)) &&
+-          !frame.CopyBitmapData(previous_frame)) {
+-        SetFailed();
+-        return;
+-      }
+-      prior_frame_ = previous_frame_index;
+-    }
+-  }
+-
+-  if (frame.GetStatus() == ImageFrame::kFrameAllocated) {
+-    SkImageInfo image_info = codec_->getInfo()
+-                                 .makeColorType(kN32_SkColorType)
+-                                 .makeColorSpace(ColorSpaceForSkImages());
+-
+-    SkCodec::Options options;
+-    options.fFrameIndex = index;
+-    options.fPriorFrame = prior_frame_;
+-    options.fZeroInitialized = SkCodec::kNo_ZeroInitialized;
+-
+-    SkCodec::Result start_incremental_decode_result =
+-        codec_->startIncrementalDecode(image_info, frame.Bitmap().getPixels(),
+-                                       frame.Bitmap().rowBytes(), &options);
+-    switch (start_incremental_decode_result) {
+-      case SkCodec::kSuccess:
+-        break;
+-      case SkCodec::kIncompleteInput:
+-        return;
+-      default:
+-        SetFailed();
+-        return;
+-    }
+-    frame.SetStatus(ImageFrame::kFramePartial);
+-  }
+-
+-  SkCodec::Result incremental_decode_result = codec_->incrementalDecode();
+-  switch (incremental_decode_result) {
+-    case SkCodec::kSuccess: {
+-      SkCodec::FrameInfo frame_info;
+-      bool frame_info_received = codec_->getFrameInfo(index, &frame_info);
+-      DCHECK(frame_info_received);
+-      frame.SetHasAlpha(frame_info.fAlpha != SkEncodedInfo::kOpaque_Alpha);
+-      frame.SetPixelsChanged(true);
+-      frame.SetStatus(ImageFrame::kFrameComplete);
+-      PostDecodeProcessing(index);
+-      break;
+-    }
+-    case SkCodec::kIncompleteInput:
+-      frame.SetPixelsChanged(true);
+-      if (FrameIsReceivedAtIndex(index) || IsAllDataReceived()) {
+-        SetFailed();
+-      }
+-      break;
+-    default:
++  Vector<size_t> frames_to_decode = FindFramesToDecode(index);
++  for (auto i = frames_to_decode.rbegin(); i != frames_to_decode.rend(); ++i) {
++    if (!reader_->Decode(*i)) {
+       SetFailed();
++      return;
++    }
++
++    // If this returns false, we need more data to continue decoding.
++    if (!PostDecodeProcessing(*i))
+       break;
+   }
++
++  // It is also a fatal error if all data is received and we have decoded all
++  // frames available but the file is truncated.
++  if (index >= frame_buffer_cache_.size() - 1 && IsAllDataReceived() &&
++      reader_ && !reader_->ParseCompleted())
++    SetFailed();
+ }
+ 
+-bool GIFImageDecoder::CanReusePreviousFrameBuffer(size_t index) const {
+-  DCHECK_LT(index, frame_buffer_cache_.size());
+-  return frame_buffer_cache_[index].GetDisposalMethod() !=
+-         ImageFrame::kDisposeOverwritePrevious;
+-}
++void GIFImageDecoder::Parse(GIFParseQuery query) {
++  if (Failed())
++    return;
+ 
+-size_t GIFImageDecoder::GetViableReferenceFrameIndex(
+-    size_t dependent_index) const {
+-  DCHECK_LT(dependent_index, frame_buffer_cache_.size());
+-
+-  size_t required_previous_frame_index =
+-      frame_buffer_cache_[dependent_index].RequiredPreviousFrameIndex();
+-
+-  // Any frame in the range [|required_previous_frame_index|, |dependent_index|)
+-  // which has a disposal method other than kRestorePrevious can be provided as
+-  // the prior frame to SkCodec.
+-  //
+-  // SkCodec sets SkCodec::FrameInfo::fRequiredFrame to the earliest frame which
+-  // can be used. This might come up when several frames update the same
+-  // subregion. If that same subregion is about to be overwritten, it doesn't
+-  // matter which frame in that chain is provided.
+-  DCHECK_NE(required_previous_frame_index, kNotFound);
+-  // Loop backwards because the frames most likely to be in cache are the most
+-  // recent.
+-  for (size_t i = dependent_index - 1; i != required_previous_frame_index;
+-       i--) {
+-    const ImageFrame& frame = frame_buffer_cache_[i];
+-
+-    if (frame.GetDisposalMethod() == ImageFrame::kDisposeOverwritePrevious)
+-      continue;
+-
+-    if (frame.GetStatus() == ImageFrame::kFrameComplete) {
+-      return i;
+-    }
++  if (!reader_) {
++    reader_ = WTF::MakeUnique<GIFImageReader>(this);
++    reader_->SetData(data_);
+   }
+ 
+-  return kNotFound;
++  if (!reader_->Parse(query))
++    SetFailed();
++}
++
++void GIFImageDecoder::OnInitFrameBuffer(size_t frame_index) {
++  current_buffer_saw_alpha_ = false;
++}
++
++bool GIFImageDecoder::CanReusePreviousFrameBuffer(size_t frame_index) const {
++  DCHECK(frame_index < frame_buffer_cache_.size());
++  return frame_buffer_cache_[frame_index].GetDisposalMethod() !=
++         ImageFrame::kDisposeOverwritePrevious;
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.h b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.h
+index 505f11d..44523dcf 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.h
++++ b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoder.h
+@@ -29,13 +29,13 @@
+ #include <memory>
+ #include "platform/image-decoders/ImageDecoder.h"
+ #include "platform/wtf/Noncopyable.h"
+-#include "platform/wtf/RefPtr.h"
+ #include "platform/wtf/Time.h"
+-#include "third_party/skia/include/codec/SkCodec.h"
+ 
+ namespace blink {
+ 
+-class SegmentStream;
++class GIFImageReader;
++
++using GIFRow = Vector<unsigned char>;
+ 
+ // This class decodes the GIF image format.
+ class PLATFORM_EXPORT GIFImageDecoder final : public ImageDecoder {
+@@ -45,43 +45,56 @@
+   GIFImageDecoder(AlphaOption, const ColorBehavior&, size_t max_decoded_bytes);
+   ~GIFImageDecoder() override;
+ 
++  enum GIFParseQuery { kGIFSizeQuery, kGIFFrameCountQuery };
++
+   // ImageDecoder:
+   String FilenameExtension() const override { return "gif"; }
+   void OnSetData(SegmentReader* data) override;
+   int RepetitionCount() const override;
+   bool FrameIsReceivedAtIndex(size_t) const override;
+   TimeDelta FrameDurationAtIndex(size_t) const override;
+-  // CAUTION: SetFailed() deletes |codec_|. Be careful to avoid
+-  // accessing deleted memory.
++  // CAUTION: SetFailed() deletes |reader_|.  Be careful to avoid
++  // accessing deleted memory, especially when calling this from inside
++  // GIFImageReader!
+   bool SetFailed() override;
+ 
+-  size_t ClearCacheExceptFrame(size_t) override;
++  // Callbacks from the GIF reader.
++  bool HaveDecodedRow(size_t frame_index,
++                      GIFRow::const_iterator row_begin,
++                      size_t width,
++                      size_t row_number,
++                      unsigned repeat_count,
++                      bool write_transparent_pixels);
++  bool FrameComplete(size_t frame_index);
++
++  // For testing.
++  bool ParseCompleted() const;
+ 
+  private:
+   // ImageDecoder:
+-  void DecodeSize() override {}
++  void ClearFrameBuffer(size_t frame_index) override;
++  virtual void DecodeSize() { Parse(kGIFSizeQuery); }
+   size_t DecodeFrameCount() override;
+   void InitializeNewFrame(size_t) override;
+   void Decode(size_t) override;
++
++  // Parses as much as is needed to answer the query, ignoring bitmap
++  // data. If parsing fails, sets the "decode failure" flag.
++  void Parse(GIFParseQuery);
++
++  // Reset the alpha tracker for this frame. Before calling this method, the
++  // caller must verify that the frame exists.
++  void OnInitFrameBuffer(size_t) override;
++
+   // When the disposal method of the frame is DisposeOverWritePrevious, the
+-  // next frame will use a previous frame's buffer as its starting state, so
++  // next frame will use the previous frame's buffer as its starting state, so
+   // we can't take over the data in that case. Before calling this method, the
+   // caller must verify that the frame exists.
+   bool CanReusePreviousFrameBuffer(size_t) const override;
+ 
+-  // When a frame depends on a previous frame's content, there is a list of
+-  // candidate reference frames. This function will find a previous frame from
+-  // that list which satisfies the requirements of being a reference frame
+-  // (kFrameComplete, not kDisposeOverwritePrevious).
+-  // If no frame is found, it returns kNotFound.
+-  size_t GetViableReferenceFrameIndex(size_t) const;
+-
+-  std::unique_ptr<SkCodec> codec_;
+-  // |codec_| owns the SegmentStream, but we need access to it to append more
+-  // data as it arrives.
+-  SegmentStream* segment_stream_;
+-  mutable int repetition_count_ = kAnimationLoopOnce;
+-  int prior_frame_;
++  bool current_buffer_saw_alpha_;
++  mutable int repetition_count_;
++  std::unique_ptr<GIFImageReader> reader_;
+ };
+ 
+ }  // namespace blink
+diff --git a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoderTest.cpp b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoderTest.cpp
+index 7ad0428..55f7142 100644
+--- a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoderTest.cpp
++++ b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageDecoderTest.cpp
+@@ -58,8 +58,16 @@
+   RefPtr<SharedBuffer> data = ReadFile(dir, file);
+   ASSERT_TRUE(data.get());
+   decoder->SetData(data.get(), true);
++  EXPECT_EQ(kAnimationLoopOnce,
++            decoder->RepetitionCount());  // Default value before decode.
+ 
+-  EXPECT_EQ(expected_repetition_count, decoder->RepetitionCount());
++  for (size_t i = 0; i < decoder->FrameCount(); ++i) {
++    ImageFrame* frame = decoder->DecodeFrameBufferAtIndex(i);
++    EXPECT_EQ(ImageFrame::kFrameComplete, frame->GetStatus());
++  }
++
++  EXPECT_EQ(expected_repetition_count,
++            decoder->RepetitionCount());  // Expected value after decode.
+ }
+ 
+ }  // anonymous namespace
+@@ -70,6 +78,7 @@
+   RefPtr<SharedBuffer> data = ReadFile(kLayoutTestResourcesDir, "animated.gif");
+   ASSERT_TRUE(data.get());
+   decoder->SetData(data.get(), true);
++  EXPECT_EQ(kAnimationLoopOnce, decoder->RepetitionCount());
+ 
+   ImageFrame* frame = decoder->DecodeFrameBufferAtIndex(0);
+   uint32_t generation_id0 = frame->Bitmap().getGenerationID();
+@@ -94,6 +103,10 @@
+   RefPtr<SharedBuffer> data = ReadFile(kLayoutTestResourcesDir, "animated.gif");
+   ASSERT_TRUE(data.get());
+   decoder->SetData(data.get(), true);
++  EXPECT_EQ(kAnimationLoopOnce, decoder->RepetitionCount());
++
++  // This call will parse the entire file.
++  EXPECT_EQ(2u, decoder->FrameCount());
+ 
+   ImageFrame* frame = decoder->DecodeFrameBufferAtIndex(0);
+   EXPECT_EQ(ImageFrame::kFrameComplete, frame->GetStatus());
+@@ -307,13 +320,10 @@
+ 
+   EXPECT_EQ(2u, decoder->FrameCount());
+   // Disposal method 4 is converted to ImageFrame::DisposeOverwritePrevious.
+-  // This is because some specs say method 3 is "overwrite previous", while
+-  // others say setting the third bit (i.e. method 4) is.
+   EXPECT_EQ(ImageFrame::kDisposeOverwritePrevious,
+             decoder->DecodeFrameBufferAtIndex(0)->GetDisposalMethod());
+-  // Unknown disposal methods (5 in this case) are converted to
+-  // ImageFrame::DisposeKeep.
+-  EXPECT_EQ(ImageFrame::kDisposeKeep,
++  // Disposal method 5 is ignored.
++  EXPECT_EQ(ImageFrame::kDisposeNotSpecified,
+             decoder->DecodeFrameBufferAtIndex(1)->GetDisposalMethod());
+ }
+ 
+@@ -380,11 +390,11 @@
+   ImageFrame* premul_frame = premul_decoder->DecodeFrameBufferAtIndex(0);
+   EXPECT_TRUE(premul_frame &&
+               premul_frame->GetStatus() != ImageFrame::kFrameComplete);
+-  EXPECT_EQ(kPremul_SkAlphaType, premul_frame->Bitmap().alphaType());
++  EXPECT_EQ(premul_frame->Bitmap().alphaType(), kPremul_SkAlphaType);
+   ImageFrame* unpremul_frame = unpremul_decoder->DecodeFrameBufferAtIndex(0);
+   EXPECT_TRUE(unpremul_frame &&
+               unpremul_frame->GetStatus() != ImageFrame::kFrameComplete);
+-  EXPECT_EQ(kUnpremul_SkAlphaType, unpremul_frame->Bitmap().alphaType());
++  EXPECT_EQ(unpremul_frame->Bitmap().alphaType(), kUnpremul_SkAlphaType);
+ 
+   // Fully decoded frame => the frame alpha type is known (opaque).
+   premul_decoder->SetData(full_data_buffer.get(), true);
+@@ -394,11 +404,11 @@
+   premul_frame = premul_decoder->DecodeFrameBufferAtIndex(0);
+   EXPECT_TRUE(premul_frame &&
+               premul_frame->GetStatus() == ImageFrame::kFrameComplete);
+-  EXPECT_EQ(kOpaque_SkAlphaType, premul_frame->Bitmap().alphaType());
++  EXPECT_EQ(premul_frame->Bitmap().alphaType(), kOpaque_SkAlphaType);
+   unpremul_frame = unpremul_decoder->DecodeFrameBufferAtIndex(0);
+   EXPECT_TRUE(unpremul_frame &&
+               unpremul_frame->GetStatus() == ImageFrame::kFrameComplete);
+-  EXPECT_EQ(kOpaque_SkAlphaType, unpremul_frame->Bitmap().alphaType());
++  EXPECT_EQ(unpremul_frame->Bitmap().alphaType(), kOpaque_SkAlphaType);
+ }
+ 
+ namespace {
+diff --git a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.cpp b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.cpp
+new file mode 100644
+index 0000000..3f5ad37
+--- /dev/null
++++ b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.cpp
+@@ -0,0 +1,900 @@
++/* -*- Mode: C; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* ***** BEGIN LICENSE BLOCK *****
++ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
++ *
++ * The contents of this file are subject to the Mozilla Public License Version
++ * 1.1 (the "License"); you may not use this file except in compliance with
++ * the License. You may obtain a copy of the License at
++ * http://www.mozilla.org/MPL/
++ *
++ * Software distributed under the License is distributed on an "AS IS" basis,
++ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
++ * for the specific language governing rights and limitations under the
++ * License.
++ *
++ * The Original Code is mozilla.org code.
++ *
++ * The Initial Developer of the Original Code is
++ * Netscape Communications Corporation.
++ * Portions created by the Initial Developer are Copyright (C) 1998
++ * the Initial Developer. All Rights Reserved.
++ *
++ * Contributor(s):
++ *   Chris Saari <saari@netscape.com>
++ *   Apple Computer
++ *
++ * Alternatively, the contents of this file may be used under the terms of
++ * either the GNU General Public License Version 2 or later (the "GPL"), or
++ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
++ * in which case the provisions of the GPL or the LGPL are applicable instead
++ * of those above. If you wish to allow use of your version of this file only
++ * under the terms of either the GPL or the LGPL, and not to allow others to
++ * use your version of this file under the terms of the MPL, indicate your
++ * decision by deleting the provisions above and replace them with the notice
++ * and other provisions required by the GPL or the LGPL. If you do not delete
++ * the provisions above, a recipient may use your version of this file under
++ * the terms of any one of the MPL, the GPL or the LGPL.
++ *
++ * ***** END LICENSE BLOCK ***** */
++
++/*
++The Graphics Interchange Format(c) is the copyright property of CompuServe
++Incorporated. Only CompuServe Incorporated is authorized to define, redefine,
++enhance, alter, modify or change in any way the definition of the format.
++
++CompuServe Incorporated hereby grants a limited, non-exclusive, royalty-free
++license for the use of the Graphics Interchange Format(sm) in computer
++software; computer software utilizing GIF(sm) must acknowledge ownership of the
++Graphics Interchange Format and its Service Mark by CompuServe Incorporated, in
++User and Technical Documentation. Computer software utilizing GIF, which is
++distributed or may be distributed without User or Technical Documentation must
++display to the screen or printer a message acknowledging ownership of the
++Graphics Interchange Format and the Service Mark by CompuServe Incorporated; in
++this case, the acknowledgement may be displayed in an opening screen or leading
++banner, or a closing screen or trailing banner. A message such as the following
++may be used:
++
++    "The Graphics Interchange Format(c) is the Copyright property of
++    CompuServe Incorporated. GIF(sm) is a Service Mark property of
++    CompuServe Incorporated."
++
++For further information, please contact :
++
++    CompuServe Incorporated
++    Graphics Technology Department
++    5000 Arlington Center Boulevard
++    Columbus, Ohio  43220
++    U. S. A.
++
++CompuServe Incorporated maintains a mailing list with all those individuals and
++organizations who wish to receive copies of this document when it is corrected
++or revised. This service is offered free of charge; please provide us with your
++mailing address.
++*/
++
++#include "platform/image-decoders/gif/GIFImageReader.h"
++
++#include <string.h>
++#include "platform/image-decoders/FastSharedBufferReader.h"
++#include "platform/wtf/PtrUtil.h"
++
++namespace blink {
++
++namespace {
++
++static constexpr unsigned kMaxColors = 256u;
++static constexpr int kBytesPerColormapEntry = 3;
++
++}  // namespace
++
++// GETN(n, s) requests at least 'n' bytes available from 'q', at start of state
++// 's'.
++//
++// Note: the hold will never need to be bigger than 256 bytes, as each GIF block
++// (except colormaps) can never be bigger than 256 bytes. Colormaps are directly
++// copied in the resp. global_colormap or dynamically allocated local_colormap,
++// so a fixed buffer in GIFImageReader is good enough. This buffer is only
++// needed to copy left-over data from one GifWrite call to the next.
++#define GETN(n, s)           \
++  do {                       \
++    bytes_to_consume_ = (n); \
++    state_ = (s);            \
++  } while (0)
++
++// Get a 16-bit value stored in little-endian format.
++#define GETINT16(p) ((p)[1] << 8 | (p)[0])
++
++// Send the data to the display front-end.
++bool GIFLZWContext::OutputRow(GIFRow::const_iterator row_begin) {
++  int drow_start = irow;
++  int drow_end = irow;
++
++  // Haeberli-inspired hack for interlaced GIFs: Replicate lines while
++  // displaying to diminish the "venetian-blind" effect as the image is
++  // loaded. Adjust pixel vertical positions to avoid the appearance of the
++  // image crawling up the screen as successive passes are drawn.
++  if (frame_context_->ProgressiveDisplay() && frame_context_->Interlaced() &&
++      ipass < 4) {
++    unsigned row_dup = 0;
++    unsigned row_shift = 0;
++
++    switch (ipass) {
++      case 1:
++        row_dup = 7;
++        row_shift = 3;
++        break;
++      case 2:
++        row_dup = 3;
++        row_shift = 1;
++        break;
++      case 3:
++        row_dup = 1;
++        row_shift = 0;
++        break;
++      default:
++        break;
++    }
++
++    drow_start -= row_shift;
++    drow_end = drow_start + row_dup;
++
++    // Extend if bottom edge isn't covered because of the shift upward.
++    if (((frame_context_->Height() - 1) - drow_end) <= row_shift)
++      drow_end = frame_context_->Height() - 1;
++
++    // Clamp first and last rows to upper and lower edge of image.
++    if (drow_start < 0)
++      drow_start = 0;
++
++    if ((unsigned)drow_end >= frame_context_->Height())
++      drow_end = frame_context_->Height() - 1;
++  }
++
++  // Protect against too much image data.
++  if ((unsigned)drow_start >= frame_context_->Height())
++    return true;
++
++  // CALLBACK: Let the client know we have decoded a row.
++  if (!client_->HaveDecodedRow(frame_context_->FrameId(), row_begin,
++                               frame_context_->Width(), drow_start,
++                               drow_end - drow_start + 1,
++                               frame_context_->ProgressiveDisplay() &&
++                                   frame_context_->Interlaced() && ipass > 1))
++    return false;
++
++  if (!frame_context_->Interlaced()) {
++    irow++;
++  } else {
++    do {
++      switch (ipass) {
++        case 1:
++          irow += 8;
++          if (irow >= frame_context_->Height()) {
++            ipass++;
++            irow = 4;
++          }
++          break;
++
++        case 2:
++          irow += 8;
++          if (irow >= frame_context_->Height()) {
++            ipass++;
++            irow = 2;
++          }
++          break;
++
++        case 3:
++          irow += 4;
++          if (irow >= frame_context_->Height()) {
++            ipass++;
++            irow = 1;
++          }
++          break;
++
++        case 4:
++          irow += 2;
++          if (irow >= frame_context_->Height()) {
++            ipass++;
++            irow = 0;
++          }
++          break;
++
++        default:
++          break;
++      }
++    } while (irow > (frame_context_->Height() - 1));
++  }
++  return true;
++}
++
++// Performs Lempel-Ziv-Welch decoding. Returns whether decoding was successful.
++// If successful, the block will have been completely consumed and/or
++// rowsRemaining will be 0.
++bool GIFLZWContext::DoLZW(const unsigned char* block, size_t bytes_in_block) {
++  const size_t width = frame_context_->Width();
++
++  if (row_iter == row_buffer.end())
++    return true;
++
++  for (const unsigned char* ch = block; bytes_in_block-- > 0; ch++) {
++    // Feed the next byte into the decoder's 32-bit input buffer.
++    datum += ((int)*ch) << bits;
++    bits += 8;
++
++    // Check for underflow of decoder's 32-bit input buffer.
++    while (bits >= codesize) {
++      // Get the leading variable-length symbol from the data stream.
++      int code = datum & codemask;
++      datum >>= codesize;
++      bits -= codesize;
++
++      // Reset the dictionary to its original state, if requested.
++      if (code == clear_code) {
++        codesize = frame_context_->DataSize() + 1;
++        codemask = (1 << codesize) - 1;
++        avail = clear_code + 2;
++        oldcode = -1;
++        continue;
++      }
++
++      // Check for explicit end-of-stream code.
++      if (code == (clear_code + 1)) {
++        // end-of-stream should only appear after all image data.
++        if (!rows_remaining)
++          return true;
++        return false;
++      }
++
++      const int temp_code = code;
++      unsigned short code_length = 0;
++      if (code < avail) {
++        // This is a pre-existing code, so we already know what it
++        // encodes.
++        code_length = suffix_length[code];
++        row_iter += code_length;
++      } else if (code == avail && oldcode != -1) {
++        // This is a new code just being added to the dictionary.
++        // It must encode the contents of the previous code, plus
++        // the first character of the previous code again.
++        code_length = suffix_length[oldcode] + 1;
++        row_iter += code_length;
++        *--row_iter = firstchar;
++        code = oldcode;
++      } else {
++        // This is an invalid code. The dictionary is just initialized
++        // and the code is incomplete. We don't know how to handle
++        // this case.
++        return false;
++      }
++
++      while (code >= clear_code) {
++        *--row_iter = suffix[code];
++        code = prefix[code];
++      }
++
++      *--row_iter = firstchar = suffix[code];
++
++      // Define a new codeword in the dictionary as long as we've read
++      // more than one value from the stream.
++      if (avail < kMaxDictionaryEntries && oldcode != -1) {
++        prefix[avail] = oldcode;
++        suffix[avail] = firstchar;
++        suffix_length[avail] = suffix_length[oldcode] + 1;
++        ++avail;
++
++        // If we've used up all the codewords of a given length
++        // increase the length of codewords by one bit, but don't
++        // exceed the specified maximum codeword size.
++        if (!(avail & codemask) && avail < kMaxDictionaryEntries) {
++          ++codesize;
++          codemask += avail;
++        }
++      }
++      oldcode = temp_code;
++      row_iter += code_length;
++
++      // Output as many rows as possible.
++      GIFRow::iterator row_begin = row_buffer.begin();
++      for (; row_begin + width <= row_iter; row_begin += width) {
++        if (!OutputRow(row_begin))
++          return false;
++        rows_remaining--;
++        if (!rows_remaining)
++          return true;
++      }
++
++      if (row_begin != row_buffer.begin()) {
++        // Move the remaining bytes to the beginning of the buffer.
++        const size_t bytes_to_copy = row_iter - row_begin;
++        memcpy(row_buffer.begin(), row_begin, bytes_to_copy);
++        row_iter = row_buffer.begin() + bytes_to_copy;
++      }
++    }
++  }
++  return true;
++}
++
++void GIFColorMap::BuildTable(FastSharedBufferReader* reader) {
++  if (!is_defined_ || !table_.IsEmpty())
++    return;
++
++  CHECK_LE(position_ + colors_ * kBytesPerColormapEntry, reader->size());
++  DCHECK_LE(colors_, kMaxColors);
++  char buffer[kMaxColors * kBytesPerColormapEntry];
++  const unsigned char* src_colormap =
++      reinterpret_cast<const unsigned char*>(reader->GetConsecutiveData(
++          position_, colors_ * kBytesPerColormapEntry, buffer));
++  table_.resize(colors_);
++  for (Table::iterator iter = table_.begin(); iter != table_.end(); ++iter) {
++    *iter = SkPackARGB32NoCheck(255, src_colormap[0], src_colormap[1],
++                                src_colormap[2]);
++    src_colormap += kBytesPerColormapEntry;
++  }
++}
++
++// Decodes this frame. |frameDecoded| will be set to true if the entire frame is
++// decoded. Returns true if decoding progressed further than before without
++// error, or there is insufficient new data to decode further. Otherwise, a
++// decoding error occurred; returns false in this case.
++bool GIFFrameContext::Decode(FastSharedBufferReader* reader,
++                             GIFImageDecoder* client,
++                             bool* frame_decoded) {
++  local_color_map_.BuildTable(reader);
++
++  *frame_decoded = false;
++  if (!lzw_context_) {
++    // Wait for more data to properly initialize GIFLZWContext.
++    if (!IsDataSizeDefined() || !IsHeaderDefined())
++      return true;
++
++    lzw_context_ = WTF::MakeUnique<GIFLZWContext>(client, this);
++    if (!lzw_context_->PrepareToDecode()) {
++      lzw_context_.reset();
++      return false;
++    }
++
++    current_lzw_block_ = 0;
++  }
++
++  // Some bad GIFs have extra blocks beyond the last row, which we don't want to
++  // decode.
++  while (current_lzw_block_ < lzw_blocks_.size() &&
++         lzw_context_->HasRemainingRows()) {
++    size_t block_position = lzw_blocks_[current_lzw_block_].block_position;
++    size_t block_size = lzw_blocks_[current_lzw_block_].block_size;
++    if (block_position + block_size > reader->size())
++      return false;
++
++    while (block_size) {
++      const char* segment = 0;
++      size_t segment_length = reader->GetSomeData(segment, block_position);
++      size_t decode_size = std::min(segment_length, block_size);
++      if (!lzw_context_->DoLZW(reinterpret_cast<const unsigned char*>(segment),
++                               decode_size))
++        return false;
++      block_position += decode_size;
++      block_size -= decode_size;
++    }
++    ++current_lzw_block_;
++  }
++
++  // If this frame is data complete then the previous loop must have completely
++  // decoded all LZW blocks.
++  // There will be no more decoding for this frame so it's time to cleanup.
++  if (IsComplete()) {
++    *frame_decoded = true;
++    lzw_context_.reset();
++  }
++  return true;
++}
++
++// Decodes a frame using GIFFrameContext:decode(). Returns true if decoding has
++// progressed, or false if an error has occurred.
++bool GIFImageReader::Decode(size_t frame_index) {
++  FastSharedBufferReader reader(data_);
++  global_color_map_.BuildTable(&reader);
++
++  bool frame_decoded = false;
++  GIFFrameContext* current_frame = frames_[frame_index].get();
++
++  return current_frame->Decode(&reader, client_, &frame_decoded) &&
++         (!frame_decoded || client_->FrameComplete(frame_index));
++}
++
++bool GIFImageReader::Parse(GIFImageDecoder::GIFParseQuery query) {
++  if (bytes_read_ >= data_->size()) {
++    // This data has already been parsed. For example, in deferred
++    // decoding, a DecodingImageGenerator with more data may have already
++    // used this same ImageDecoder to decode. This can happen if two
++    // SkImages created by a DeferredImageDecoder are drawn/prerolled
++    // out of order (with respect to how much data they had at creation
++    // time).
++    return !client_->Failed();
++  }
++
++  return ParseData(bytes_read_, data_->size() - bytes_read_, query);
++}
++
++// Parse incoming GIF data stream into internal data structures.
++// Return true if parsing has progressed or there is not enough data.
++// Return false if a fatal error is encountered.
++bool GIFImageReader::ParseData(size_t data_position,
++                               size_t len,
++                               GIFImageDecoder::GIFParseQuery query) {
++  if (!len) {
++    // No new data has come in since the last call, just ignore this call.
++    return true;
++  }
++
++  if (len < bytes_to_consume_)
++    return true;
++
++  FastSharedBufferReader reader(data_);
++
++  // A read buffer of 16 bytes is enough to accomodate all possible reads for
++  // parsing.
++  char read_buffer[16];
++
++  // Read as many components from |m_data| as possible. At the beginning of each
++  // iteration, |dataPosition| is advanced by m_bytesToConsume to point to the
++  // next component. |len| is decremented accordingly.
++  while (len >= bytes_to_consume_) {
++    const size_t current_component_position = data_position;
++
++    // Mark the current component as consumed. Note that currentComponent will
++    // remain pointed at this component until the next loop iteration.
++    data_position += bytes_to_consume_;
++    len -= bytes_to_consume_;
++
++    switch (state_) {
++      case GIFLZW:
++        DCHECK(!frames_.IsEmpty());
++        // m_bytesToConsume is the current component size because it hasn't been
++        // updated.
++        frames_.back()->AddLzwBlock(current_component_position,
++                                    bytes_to_consume_);
++        GETN(1, kGIFSubBlock);
++        break;
++
++      case kGIFLZWStart: {
++        DCHECK(!frames_.IsEmpty());
++        frames_.back()->SetDataSize(static_cast<unsigned char>(
++            reader.GetOneByte(current_component_position)));
++        GETN(1, kGIFSubBlock);
++        break;
++      }
++
++      case kGIFType: {
++        const char* current_component = reader.GetConsecutiveData(
++            current_component_position, 6, read_buffer);
++
++        // All GIF files begin with "GIF87a" or "GIF89a".
++        if (!memcmp(current_component, "GIF89a", 6))
++          version_ = 89;
++        else if (!memcmp(current_component, "GIF87a", 6))
++          version_ = 87;
++        else
++          return false;
++        GETN(7, kGIFGlobalHeader);
++        break;
++      }
++
++      case kGIFGlobalHeader: {
++        const unsigned char* current_component =
++            reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                current_component_position, 5, read_buffer));
++
++        // This is the height and width of the "screen" or frame into which
++        // images are rendered. The individual images can be smaller than
++        // the screen size and located with an origin anywhere within the
++        // screen.
++        // Note that we don't inform the client of the size yet, as it might
++        // change after we read the first frame's image header.
++        screen_width_ = GETINT16(current_component);
++        screen_height_ = GETINT16(current_component + 2);
++
++        const size_t global_color_map_colors = 2
++                                               << (current_component[4] & 0x07);
++
++        if ((current_component[4] & 0x80) &&
++            global_color_map_colors > 0) { /* global map */
++          global_color_map_.SetTablePositionAndSize(data_position,
++                                                    global_color_map_colors);
++          GETN(kBytesPerColormapEntry * global_color_map_colors,
++               kGIFGlobalColormap);
++          break;
++        }
++
++        GETN(1, kGIFImageStart);
++        break;
++      }
++
++      case kGIFGlobalColormap: {
++        global_color_map_.SetDefined();
++        GETN(1, kGIFImageStart);
++        break;
++      }
++
++      case kGIFImageStart: {
++        const char current_component =
++            reader.GetOneByte(current_component_position);
++
++        if (current_component == '!') {  // extension.
++          GETN(2, kGIFExtension);
++          break;
++        }
++
++        if (current_component == ',') {  // image separator.
++          GETN(9, kGIFImageHeader);
++          break;
++        }
++
++        // If we get anything other than ',' (image separator), '!'
++        // (extension), or ';' (trailer), there is extraneous data
++        // between blocks. The GIF87a spec tells us to keep reading
++        // until we find an image separator, but GIF89a says such
++        // a file is corrupt. We follow Mozilla's implementation and
++        // proceed as if the file were correctly terminated, so the
++        // GIF will display.
++        GETN(0, kGIFDone);
++        break;
++      }
++
++      case kGIFExtension: {
++        const unsigned char* current_component =
++            reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                current_component_position, 2, read_buffer));
++
++        size_t bytes_in_block = current_component[1];
++        GIFState exception_state = kGIFSkipBlock;
++
++        switch (*current_component) {
++          case 0xf9:
++            exception_state = kGIFControlExtension;
++            // The GIF spec mandates that the GIFControlExtension header block
++            // length is 4 bytes, and the parser for this block reads 4 bytes,
++            // so we must enforce that the buffer contains at least this many
++            // bytes. If the GIF specifies a different length, we allow that, so
++            // long as it's larger; the additional data will simply be ignored.
++            bytes_in_block = std::max(bytes_in_block, static_cast<size_t>(4));
++            break;
++
++          // The GIF spec also specifies the lengths of the following two
++          // extensions' headers (as 12 and 11 bytes, respectively). Because we
++          // ignore the plain text extension entirely and sanity-check the
++          // actual length of the application extension header before reading
++          // it, we allow GIFs to deviate from these values in either direction.
++          // This is important for real-world compatibility, as GIFs in the wild
++          // exist with application extension headers that are both shorter and
++          // longer than 11 bytes.
++          case 0x01:
++            // ignoring plain text extension
++            break;
++
++          case 0xff:
++            exception_state = kGIFApplicationExtension;
++            break;
++
++          case 0xfe:
++            exception_state = kGIFConsumeComment;
++            break;
++        }
++
++        if (bytes_in_block)
++          GETN(bytes_in_block, exception_state);
++        else
++          GETN(1, kGIFImageStart);
++        break;
++      }
++
++      case kGIFConsumeBlock: {
++        const unsigned char current_component = static_cast<unsigned char>(
++            reader.GetOneByte(current_component_position));
++        if (!current_component)
++          GETN(1, kGIFImageStart);
++        else
++          GETN(current_component, kGIFSkipBlock);
++        break;
++      }
++
++      case kGIFSkipBlock: {
++        GETN(1, kGIFConsumeBlock);
++        break;
++      }
++
++      case kGIFControlExtension: {
++        const unsigned char* current_component =
++            reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                current_component_position, 4, read_buffer));
++
++        AddFrameIfNecessary();
++        GIFFrameContext* current_frame = frames_.back().get();
++        if (*current_component & 0x1)
++          current_frame->SetTransparentPixel(current_component[3]);
++
++        // We ignore the "user input" bit.
++
++        // NOTE: This relies on the values in the FrameDisposalMethod enum
++        // matching those in the GIF spec!
++        int disposal_method = ((*current_component) >> 2) & 0x7;
++        if (disposal_method < 4) {
++          current_frame->SetDisposalMethod(
++              static_cast<ImageFrame::DisposalMethod>(disposal_method));
++        } else if (disposal_method == 4) {
++          // Some specs say that disposal method 3 is "overwrite previous",
++          // others that setting the third bit of the field (i.e. method 4) is.
++          // We map both to the same value.
++          current_frame->SetDisposalMethod(
++              ImageFrame::kDisposeOverwritePrevious);
++        }
++        current_frame->SetDelayTime(GETINT16(current_component + 1) * 10);
++        GETN(1, kGIFConsumeBlock);
++        break;
++      }
++
++      case kGIFCommentExtension: {
++        const unsigned char current_component = static_cast<unsigned char>(
++            reader.GetOneByte(current_component_position));
++        if (current_component)
++          GETN(current_component, kGIFConsumeComment);
++        else
++          GETN(1, kGIFImageStart);
++        break;
++      }
++
++      case kGIFConsumeComment: {
++        GETN(1, kGIFCommentExtension);
++        break;
++      }
++
++      case kGIFApplicationExtension: {
++        // Check for netscape application extension.
++        if (bytes_to_consume_ == 11) {
++          const unsigned char* current_component =
++              reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                  current_component_position, 11, read_buffer));
++
++          if (!memcmp(current_component, "NETSCAPE2.0", 11) ||
++              !memcmp(current_component, "ANIMEXTS1.0", 11))
++            GETN(1, kGIFNetscapeExtensionBlock);
++        }
++
++        if (state_ != kGIFNetscapeExtensionBlock)
++          GETN(1, kGIFConsumeBlock);
++        break;
++      }
++
++      // Netscape-specific GIF extension: animation looping.
++      case kGIFNetscapeExtensionBlock: {
++        const int current_component = static_cast<unsigned char>(
++            reader.GetOneByte(current_component_position));
++        // GIFConsumeNetscapeExtension always reads 3 bytes from the stream; we
++        // should at least wait for this amount.
++        if (current_component)
++          GETN(std::max(3, current_component), kGIFConsumeNetscapeExtension);
++        else
++          GETN(1, kGIFImageStart);
++        break;
++      }
++
++      // Parse netscape-specific application extensions
++      case kGIFConsumeNetscapeExtension: {
++        const unsigned char* current_component =
++            reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                current_component_position, 3, read_buffer));
++
++        int netscape_extension = current_component[0] & 7;
++
++        // Loop entire animation specified # of times. Only read the loop count
++        // during the first iteration.
++        if (netscape_extension == 1) {
++          loop_count_ = GETINT16(current_component + 1);
++
++          // Zero loop count is infinite animation loop request.
++          if (!loop_count_)
++            loop_count_ = kAnimationLoopInfinite;
++
++          GETN(1, kGIFNetscapeExtensionBlock);
++        } else if (netscape_extension == 2) {
++          // Wait for specified # of bytes to enter buffer.
++
++          // Don't do this, this extension doesn't exist (isn't used at all)
++          // and doesn't do anything, as our streaming/buffering takes care of
++          // it all. See http://semmix.pl/color/exgraf/eeg24.htm .
++          GETN(1, kGIFNetscapeExtensionBlock);
++        } else {
++          // 0,3-7 are yet to be defined netscape extension codes
++          return false;
++        }
++        break;
++      }
++
++      case kGIFImageHeader: {
++        unsigned height, width, x_offset, y_offset;
++        const unsigned char* current_component =
++            reinterpret_cast<const unsigned char*>(reader.GetConsecutiveData(
++                current_component_position, 9, read_buffer));
++
++        /* Get image offsets, with respect to the screen origin */
++        x_offset = GETINT16(current_component);
++        y_offset = GETINT16(current_component + 2);
++
++        /* Get image width and height. */
++        width = GETINT16(current_component + 4);
++        height = GETINT16(current_component + 6);
++
++        // Some GIF files have frames that don't fit in the specified
++        // overall image size. For the first frame, we can simply enlarge
++        // the image size to allow the frame to be visible.  We can't do
++        // this on subsequent frames because the rest of the decoding
++        // infrastructure assumes the image size won't change as we
++        // continue decoding, so any subsequent frames that are even
++        // larger will be cropped.
++        // Luckily, handling just the first frame is sufficient to deal
++        // with most cases, e.g. ones where the image size is erroneously
++        // set to zero, since usually the first frame completely fills
++        // the image.
++        if (CurrentFrameIsFirstFrame()) {
++          screen_height_ = std::max(screen_height_, y_offset + height);
++          screen_width_ = std::max(screen_width_, x_offset + width);
++        }
++
++        // Inform the client of the final size.
++        if (!sent_size_to_client_ && client_ &&
++            !client_->SetSize(screen_width_, screen_height_))
++          return false;
++        sent_size_to_client_ = true;
++
++        if (query == GIFImageDecoder::kGIFSizeQuery) {
++          // The decoder needs to stop. Hand back the number of bytes we
++          // consumed from the buffer minus 9 (the amount we consumed to read
++          // the header).
++          SetRemainingBytes(len + 9);
++          GETN(9, kGIFImageHeader);
++          return true;
++        }
++
++        AddFrameIfNecessary();
++        GIFFrameContext* current_frame = frames_.back().get();
++
++        current_frame->SetHeaderDefined();
++
++        // Work around more broken GIF files that have zero image width or
++        // height.
++        if (!height || !width) {
++          height = screen_height_;
++          width = screen_width_;
++          if (!height || !width)
++            return false;
++        }
++        current_frame->SetRect(x_offset, y_offset, width, height);
++        current_frame->SetInterlaced(current_component[8] & 0x40);
++
++        // Overlaying interlaced, transparent GIFs over
++        // existing image data using the Haeberli display hack
++        // requires saving the underlying image in order to
++        // avoid jaggies at the transparency edges. We are
++        // unprepared to deal with that, so don't display such
++        // images progressively. Which means only the first
++        // frame can be progressively displayed.
++        // FIXME: It is possible that a non-transparent frame
++        // can be interlaced and progressively displayed.
++        current_frame->SetProgressiveDisplay(CurrentFrameIsFirstFrame());
++
++        const bool is_local_colormap_defined = current_component[8] & 0x80;
++        if (is_local_colormap_defined) {
++          // The three low-order bits of currentComponent[8] specify the bits
++          // per pixel.
++          const size_t num_colors = 2 << (current_component[8] & 0x7);
++          current_frame->LocalColorMap().SetTablePositionAndSize(data_position,
++                                                                 num_colors);
++          GETN(kBytesPerColormapEntry * num_colors, kGIFImageColormap);
++          break;
++        }
++
++        GETN(1, kGIFLZWStart);
++        break;
++      }
++
++      case kGIFImageColormap: {
++        DCHECK(!frames_.IsEmpty());
++        frames_.back()->LocalColorMap().SetDefined();
++        GETN(1, kGIFLZWStart);
++        break;
++      }
++
++      case kGIFSubBlock: {
++        const size_t bytes_in_block = static_cast<unsigned char>(
++            reader.GetOneByte(current_component_position));
++        if (bytes_in_block) {
++          GETN(bytes_in_block, GIFLZW);
++        } else {
++          // Finished parsing one frame; Process next frame.
++          DCHECK(!frames_.IsEmpty());
++          // Note that some broken GIF files do not have enough LZW blocks to
++          // fully decode all rows; we treat this case as "frame complete".
++          frames_.back()->SetComplete();
++          GETN(1, kGIFImageStart);
++        }
++        break;
++      }
++
++      case kGIFDone: {
++        parse_completed_ = true;
++        return true;
++      }
++
++      default:
++        // We shouldn't ever get here.
++        return false;
++        break;
++    }
++  }
++
++  SetRemainingBytes(len);
++  return true;
++}
++
++void GIFImageReader::SetRemainingBytes(size_t remaining_bytes) {
++  DCHECK_LE(remaining_bytes, data_->size());
++  bytes_read_ = data_->size() - remaining_bytes;
++}
++
++void GIFImageReader::AddFrameIfNecessary() {
++  if (frames_.IsEmpty() || frames_.back()->IsComplete())
++    frames_.push_back(WTF::WrapUnique(new GIFFrameContext(frames_.size())));
++}
++
++// FIXME: Move this method to close to doLZW().
++bool GIFLZWContext::PrepareToDecode() {
++  DCHECK(frame_context_->IsDataSizeDefined());
++  DCHECK(frame_context_->IsHeaderDefined());
++
++  // Since we use a codesize of 1 more than the datasize, we need to ensure
++  // that our datasize is strictly less than the kMaxDictionaryEntryBits.
++  if (frame_context_->DataSize() >= kMaxDictionaryEntryBits)
++    return false;
++  clear_code = 1 << frame_context_->DataSize();
++  avail = clear_code + 2;
++  oldcode = -1;
++  codesize = frame_context_->DataSize() + 1;
++  codemask = (1 << codesize) - 1;
++  datum = bits = 0;
++  ipass = frame_context_->Interlaced() ? 1 : 0;
++  irow = 0;
++
++  // We want to know the longest sequence encodable by a dictionary with
++  // kMaxDictionaryEntries entries. If we ignore the need to encode the base
++  // values themselves at the beginning of the dictionary, as well as the need
++  // for a clear code or a termination code, we could use every entry to
++  // encode a series of multiple values. If the input value stream looked
++  // like "AAAAA..." (a long string of just one value), the first dictionary
++  // entry would encode AA, the next AAA, the next AAAA, and so forth. Thus
++  // the longest sequence would be kMaxDictionaryEntries + 1 values.
++  //
++  // However, we have to account for reserved entries. The first |datasize|
++  // bits are reserved for the base values, and the next two entries are
++  // reserved for the clear code and termination code. In theory a GIF can
++  // set the datasize to 0, meaning we have just two reserved entries, making
++  // the longest sequence (kMaxDictionaryEntries + 1) - 2 values long. Since
++  // each value is a byte, this is also the number of bytes in the longest
++  // encodable sequence.
++  const size_t kMaxBytes = kMaxDictionaryEntries - 1;
++
++  // Now allocate the output buffer. We decode directly into this buffer
++  // until we have at least one row worth of data, then call outputRow().
++  // This means worst case we may have (row width - 1) bytes in the buffer
++  // and then decode a sequence |maxBytes| long to append.
++  row_buffer.resize(frame_context_->Width() - 1 + kMaxBytes);
++  row_iter = row_buffer.begin();
++  rows_remaining = frame_context_->Height();
++
++  // Clearing the whole suffix table lets us be more tolerant of bad data.
++  for (int i = 0; i < clear_code; ++i) {
++    suffix[i] = i;
++    suffix_length[i] = 1;
++  }
++  return true;
++}
++
++}  // namespace blink
+diff --git a/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.h b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.h
+new file mode 100644
+index 0000000..1ebaca5
+--- /dev/null
++++ b/third_party/WebKit/Source/platform/image-decoders/gif/GIFImageReader.h
+@@ -0,0 +1,369 @@
++/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* ***** BEGIN LICENSE BLOCK *****
++ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
++ *
++ * The contents of this file are subject to the Mozilla Public License Version
++ * 1.1 (the "License"); you may not use this file except in compliance with
++ * the License. You may obtain a copy of the License at
++ * http://www.mozilla.org/MPL/
++ *
++ * Software distributed under the License is distributed on an "AS IS" basis,
++ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
++ * for the specific language governing rights and limitations under the
++ * License.
++ *
++ * The Original Code is Mozilla Communicator client code.
++ *
++ * The Initial Developer of the Original Code is
++ * Netscape Communications Corporation.
++ * Portions created by the Initial Developer are Copyright (C) 1998
++ * the Initial Developer. All Rights Reserved.
++ *
++ * Contributor(s):
++ *
++ * Alternatively, the contents of this file may be used under the terms of
++ * either the GNU General Public License Version 2 or later (the "GPL"), or
++ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
++ * in which case the provisions of the GPL or the LGPL are applicable instead
++ * of those above. If you wish to allow use of your version of this file only
++ * under the terms of either the GPL or the LGPL, and not to allow others to
++ * use your version of this file under the terms of the MPL, indicate your
++ * decision by deleting the provisions above and replace them with the notice
++ * and other provisions required by the GPL or the LGPL. If you do not delete
++ * the provisions above, a recipient may use your version of this file under
++ * the terms of any one of the MPL, the GPL or the LGPL.
++ *
++ * ***** END LICENSE BLOCK ***** */
++
++#ifndef GIFImageReader_h
++#define GIFImageReader_h
++
++// Define ourselves as the clientPtr.  Mozilla just hacked their C++ callback
++// class into this old C decoder, so we will too.
++#include <memory>
++#include "platform/image-decoders/gif/GIFImageDecoder.h"
++#include "platform/wtf/Allocator.h"
++#include "platform/wtf/Noncopyable.h"
++#include "platform/wtf/Vector.h"
++
++namespace blink {
++
++class FastSharedBufferReader;
++
++const int kCLoopCountNotSeen = -2;
++
++// List of possible parsing states.
++enum GIFState {
++  kGIFType,
++  kGIFGlobalHeader,
++  kGIFGlobalColormap,
++  kGIFImageStart,
++  kGIFImageHeader,
++  kGIFImageColormap,
++  kGIFImageBody,
++  kGIFLZWStart,
++  GIFLZW,
++  kGIFSubBlock,
++  kGIFExtension,
++  kGIFControlExtension,
++  kGIFConsumeBlock,
++  kGIFSkipBlock,
++  kGIFDone,
++  kGIFCommentExtension,
++  kGIFApplicationExtension,
++  kGIFNetscapeExtensionBlock,
++  kGIFConsumeNetscapeExtension,
++  kGIFConsumeComment
++};
++
++struct GIFFrameContext;
++
++// LZW decoder state machine.
++class GIFLZWContext final {
++  USING_FAST_MALLOC(GIFLZWContext);
++  WTF_MAKE_NONCOPYABLE(GIFLZWContext);
++
++ public:
++  GIFLZWContext(blink::GIFImageDecoder* client,
++                const GIFFrameContext* frame_context)
++      : codesize(0),
++        codemask(0),
++        clear_code(0),
++        avail(0),
++        oldcode(0),
++        firstchar(0),
++        bits(0),
++        datum(0),
++        ipass(0),
++        irow(0),
++        rows_remaining(0),
++        row_iter(0),
++        client_(client),
++        frame_context_(frame_context) {}
++
++  bool PrepareToDecode();
++  bool OutputRow(GIFRow::const_iterator row_begin);
++  bool DoLZW(const unsigned char* block, size_t bytes_in_block);
++  bool HasRemainingRows() { return rows_remaining; }
++
++ private:
++  enum {
++    kMaxDictionaryEntryBits = 12,
++    // 2^kMaxDictionaryEntryBits
++    kMaxDictionaryEntries = 4096,
++  };
++
++  // LZW decoding states and output states.
++  int codesize;
++  int codemask;
++  int clear_code;  // Codeword used to trigger dictionary reset.
++  int avail;       // Index of next available slot in dictionary.
++  int oldcode;
++  unsigned char firstchar;
++  int bits;               // Number of unread bits in "datum".
++  int datum;              // 32-bit input buffer.
++  int ipass;              // Interlace pass; Ranges 1-4 if interlaced.
++  size_t irow;            // Current output row, starting at zero.
++  size_t rows_remaining;  // Rows remaining to be output.
++
++  unsigned short prefix[kMaxDictionaryEntries];
++  unsigned char suffix[kMaxDictionaryEntries];
++  unsigned short suffix_length[kMaxDictionaryEntries];
++  GIFRow row_buffer;  // Single scanline temporary buffer.
++  GIFRow::iterator row_iter;
++
++  // Initialized during construction and read-only.
++  blink::GIFImageDecoder* client_;
++  const GIFFrameContext* frame_context_;
++};
++
++// Data structure for one LZW block.
++struct GIFLZWBlock {
++  DISALLOW_NEW_EXCEPT_PLACEMENT_NEW();
++
++ public:
++  GIFLZWBlock(size_t position, size_t size)
++      : block_position(position), block_size(size) {}
++
++  size_t block_position;
++  size_t block_size;
++};
++
++class GIFColorMap final {
++  DISALLOW_NEW();
++
++ public:
++  typedef Vector<blink::ImageFrame::PixelData> Table;
++
++  GIFColorMap() : is_defined_(false), position_(0), colors_(0) {}
++
++  // Set position and number of colors for the RGB table in the data stream.
++  void SetTablePositionAndSize(size_t position, size_t colors) {
++    position_ = position;
++    colors_ = colors;
++  }
++  void SetDefined() { is_defined_ = true; }
++  bool IsDefined() const { return is_defined_; }
++
++  // Build RGBA table using the data stream.
++  void BuildTable(blink::FastSharedBufferReader*);
++  const Table& GetTable() const { return table_; }
++
++ private:
++  bool is_defined_;
++  size_t position_;
++  size_t colors_;
++  Table table_;
++};
++
++// LocalFrame output state machine.
++struct GIFFrameContext {
++  USING_FAST_MALLOC(GIFFrameContext);
++  WTF_MAKE_NONCOPYABLE(GIFFrameContext);
++
++ public:
++  GIFFrameContext(int id)
++      : frame_id_(id),
++        x_offset_(0),
++        y_offset_(0),
++        width_(0),
++        height_(0),
++        transparent_pixel_(kNotFound),
++        disposal_method_(blink::ImageFrame::kDisposeNotSpecified),
++        data_size_(0),
++        progressive_display_(false),
++        interlaced_(false),
++        delay_time_(0),
++        current_lzw_block_(0),
++        is_complete_(false),
++        is_header_defined_(false),
++        is_data_size_defined_(false) {}
++
++  ~GIFFrameContext() {}
++
++  void AddLzwBlock(size_t position, size_t size) {
++    lzw_blocks_.push_back(GIFLZWBlock(position, size));
++  }
++
++  bool Decode(blink::FastSharedBufferReader*,
++              blink::GIFImageDecoder* client,
++              bool* frame_decoded);
++
++  int FrameId() const { return frame_id_; }
++  void SetRect(unsigned x, unsigned y, unsigned width, unsigned height) {
++    x_offset_ = x;
++    y_offset_ = y;
++    width_ = width;
++    height_ = height;
++  }
++  blink::IntRect FrameRect() const {
++    return blink::IntRect(x_offset_, y_offset_, width_, height_);
++  }
++  unsigned XOffset() const { return x_offset_; }
++  unsigned YOffset() const { return y_offset_; }
++  unsigned Width() const { return width_; }
++  unsigned Height() const { return height_; }
++  size_t TransparentPixel() const { return transparent_pixel_; }
++  void SetTransparentPixel(size_t pixel) { transparent_pixel_ = pixel; }
++  blink::ImageFrame::DisposalMethod GetDisposalMethod() const {
++    return disposal_method_;
++  }
++  void SetDisposalMethod(blink::ImageFrame::DisposalMethod disposal_method) {
++    disposal_method_ = disposal_method;
++  }
++  unsigned DelayTime() const { return delay_time_; }
++  void SetDelayTime(unsigned delay) { delay_time_ = delay; }
++  bool IsComplete() const { return is_complete_; }
++  void SetComplete() { is_complete_ = true; }
++  bool IsHeaderDefined() const { return is_header_defined_; }
++  void SetHeaderDefined() { is_header_defined_ = true; }
++  bool IsDataSizeDefined() const { return is_data_size_defined_; }
++  int DataSize() const { return data_size_; }
++  void SetDataSize(int size) {
++    data_size_ = size;
++    is_data_size_defined_ = true;
++  }
++  bool ProgressiveDisplay() const { return progressive_display_; }
++  void SetProgressiveDisplay(bool progressive_display) {
++    progressive_display_ = progressive_display;
++  }
++  bool Interlaced() const { return interlaced_; }
++  void SetInterlaced(bool interlaced) { interlaced_ = interlaced; }
++
++  void ClearDecodeState() { lzw_context_.reset(); }
++  const GIFColorMap& LocalColorMap() const { return local_color_map_; }
++  GIFColorMap& LocalColorMap() { return local_color_map_; }
++
++ private:
++  int frame_id_;
++  unsigned x_offset_;
++  unsigned y_offset_;  // With respect to "screen" origin.
++  unsigned width_;
++  unsigned height_;
++  size_t transparent_pixel_;  // Index of transparent pixel. Value is kNotFound
++                              // if there is no transparent pixel.
++  blink::ImageFrame::DisposalMethod
++      disposal_method_;  // Restore to background, leave in place, etc.
++  int data_size_;
++
++  bool progressive_display_;  // If true, do Haeberli interlace hack.
++  bool interlaced_;           // True, if scanlines arrive interlaced order.
++
++  unsigned delay_time_;  // Display time, in milliseconds, for this image in a
++                         // multi-image GIF.
++
++  std::unique_ptr<GIFLZWContext> lzw_context_;
++  Vector<GIFLZWBlock> lzw_blocks_;  // LZW blocks for this frame.
++  GIFColorMap local_color_map_;
++
++  size_t current_lzw_block_;
++  bool is_complete_;
++  bool is_header_defined_;
++  bool is_data_size_defined_;
++};
++
++class PLATFORM_EXPORT GIFImageReader final {
++  USING_FAST_MALLOC(GIFImageReader);
++  WTF_MAKE_NONCOPYABLE(GIFImageReader);
++
++ public:
++  GIFImageReader(blink::GIFImageDecoder* client = 0)
++      : client_(client),
++        state_(kGIFType),
++        // Number of bytes for GIF type, either "GIF87a" or "GIF89a".
++        bytes_to_consume_(6),
++        bytes_read_(0),
++        version_(0),
++        screen_width_(0),
++        screen_height_(0),
++        sent_size_to_client_(false),
++        loop_count_(kCLoopCountNotSeen),
++        parse_completed_(false) {}
++
++  ~GIFImageReader() {}
++
++  void SetData(RefPtr<blink::SegmentReader> data) { data_ = std::move(data); }
++  bool Parse(blink::GIFImageDecoder::GIFParseQuery);
++  bool Decode(size_t frame_index);
++
++  size_t ImagesCount() const {
++    if (frames_.IsEmpty())
++      return 0;
++
++    // This avoids counting an empty frame when the file is truncated right
++    // after GIFControlExtension but before GIFImageHeader.
++    // FIXME: This extra complexity is not necessary and we should just report
++    // m_frames.size().
++    return frames_.back()->IsHeaderDefined() ? frames_.size()
++                                             : frames_.size() - 1;
++  }
++  int LoopCount() const { return loop_count_; }
++
++  const GIFColorMap& GlobalColorMap() const { return global_color_map_; }
++
++  const GIFFrameContext* FrameContext(size_t index) const {
++    return index < frames_.size() ? frames_[index].get() : 0;
++  }
++
++  bool ParseCompleted() const { return parse_completed_; }
++
++  void ClearDecodeState(size_t index) { frames_[index]->ClearDecodeState(); }
++
++ private:
++  bool ParseData(size_t data_position,
++                 size_t len,
++                 blink::GIFImageDecoder::GIFParseQuery);
++  void SetRemainingBytes(size_t);
++
++  void AddFrameIfNecessary();
++  bool CurrentFrameIsFirstFrame() const {
++    return frames_.IsEmpty() ||
++           (frames_.size() == 1u && !frames_[0]->IsComplete());
++  }
++
++  blink::GIFImageDecoder* client_;
++
++  // Parsing state machine.
++  GIFState state_;           // Current decoder master state.
++  size_t bytes_to_consume_;  // Number of bytes to consume for next stage of
++                             // parsing.
++  size_t bytes_read_;        // Number of bytes processed.
++
++  // Global (multi-image) state.
++  int version_;            // Either 89 for GIF89 or 87 for GIF87.
++  unsigned screen_width_;  // Logical screen width & height.
++  unsigned screen_height_;
++  bool sent_size_to_client_;
++  GIFColorMap global_color_map_;
++  int loop_count_;  // Netscape specific extension block to control the number
++                    // of animation loops a GIF renders.
++
++  Vector<std::unique_ptr<GIFFrameContext>> frames_;
++
++  RefPtr<blink::SegmentReader> data_;
++  bool parse_completed_;
++};
++
++}  // namespace blink
++
++#endif
