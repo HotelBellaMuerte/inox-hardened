@@ -14,3 +14,14 @@
    registry->RegisterBooleanPref(prefs::kDevToolsDisabled, false);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacement);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacementPopup);
+@@ -81,8 +81,8 @@
+ #endif
+ #if BUILDFLAG(ENABLE_WEBRTC)
+   // TODO(guoweis): Remove next 2 options at M50.
+-  registry->RegisterBooleanPref(prefs::kWebRTCMultipleRoutesEnabled, true);
+-  registry->RegisterBooleanPref(prefs::kWebRTCNonProxiedUdpEnabled, true);
++  registry->RegisterBooleanPref(prefs::kWebRTCMultipleRoutesEnabled, false);
++  registry->RegisterBooleanPref(prefs::kWebRTCNonProxiedUdpEnabled, false);
+   registry->RegisterStringPref(prefs::kWebRTCIPHandlingPolicy,
+                                content::kWebRTCIPHandlingDefault);
+   registry->RegisterStringPref(prefs::kWebRTCUDPPortRange, std::string());
