@@ -1,0 +1,10 @@
+--- a/cc/paint/raw_memory_transfer_cache_entry.cc	2017-11-28 16:04:50.000000000 -0400
++++ b/cc/paint/raw_memory_transfer_cache_entry.cc.new	2017-11-28 19:30:09.910647499 -0400
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "cc/paint/raw_memory_transfer_cache_entry.h"
++#include <string.h>
+ 
+ namespace cc {
+ 

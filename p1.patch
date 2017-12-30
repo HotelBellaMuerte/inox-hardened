@@ -1,0 +1,13 @@
+# Disables browser sign-in
+
+--- a/components/signin/core/browser/signin_manager_base.cc
++++ b/components/signin/core/browser/signin_manager_base.cc
+@@ -159,7 +159,7 @@
+ bool SigninManagerBase::IsInitialized() const { return initialized_; }
+ 
+ bool SigninManagerBase::IsSigninAllowed() const {
+-  return client_->GetPrefs()->GetBoolean(prefs::kSigninAllowed);
++  return false;
+ }
+ 
+ AccountInfo SigninManagerBase::GetAuthenticatedAccountInfo() const {

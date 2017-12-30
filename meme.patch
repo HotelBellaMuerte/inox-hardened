@@ -1,0 +1,10 @@
+--- a/base/metrics/field_trial.cc	2017-11-07 19:05:31.000000000 -0400
++++ b/base/metrics/field_trial.cc	2017-11-07 22:13:16.978004262 -0400
+@@ -23,6 +23,7 @@
+ #include "base/strings/stringprintf.h"
+ #include "base/strings/utf_string_conversions.h"
+ #include "base/unguessable_token.h"
++#include "base/observer_list_threadsafe.cc"
+ 
+ // On POSIX, the fd is shared using the mapping in GlobalDescriptors.
+ #if defined(OS_POSIX) && !defined(OS_NACL)

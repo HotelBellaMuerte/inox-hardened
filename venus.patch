@@ -1,0 +1,13 @@
+--- a/third_party/WebKit/Source/core/frame/Settings.json5	
+2017-11-03 10:25:40.587548982 -0400
++++ b/third_party/WebKit/Source/core/frame/Settings.json5	
+2017-11-03 10:25:59.130975667 -0400
+@@ -721,7 +721,7 @@
+ 
+     {
+       name: "disableReadingFromCanvas",
+-      initial: false,
++      initial: true,
+     },
+     {
+       name: "strictMixedContentChecking",
