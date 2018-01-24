@@ -1,10 +1,11 @@
 --- a/chrome/browser/ui/startup/startup_tab_provider.cc	2017-10-18 17:59:46.753324198 -0400
 +++ b/chrome/browser/ui/startup/startup_tab_provider.cc	2017-10-18 17:59:14.879923757 -0400
-@@ -189,12 +189,6 @@
+@@ -194,13 +194,6 @@
  StartupTabs StartupTabProviderImpl::GetStandardOnboardingTabsForState(
      const StandardOnboardingTabsParams& params) {
    StartupTabs tabs;
--  if (CanShowWelcome(params.is_signin_allowed, params.is_supervised_user) &&
+-  if (CanShowWelcome(params.is_signin_allowed, params.is_supervised_user,
+-                     params.is_force_signin_enabled) &&
 -      ShouldShowWelcomeForOnboarding(params.has_seen_welcome_page,
 -                                     params.is_signed_in,
 -                                     params.is_signin_in_progress)) {
@@ -13,7 +14,7 @@
    return tabs;
  }
  
-@@ -217,15 +211,9 @@
+@@ -223,15 +216,8 @@
  StartupTabs StartupTabProviderImpl::GetWin10OnboardingTabsForState(
      const StandardOnboardingTabsParams& standard_params,
      const Win10OnboardingTabsParams& win10_params) {
@@ -24,10 +25,10 @@
 -    return {StartupTab(GetWin10WelcomePageUrl(!standard_params.is_first_run),
 -                       false)};
 -  }
+-
+-  return GetStandardOnboardingTabsForState(standard_params);
 +  StartupTabs tabs;
 +  return tabs;
- 
--  return GetStandardOnboardingTabsForState(standard_params);
  }
  #endif
  

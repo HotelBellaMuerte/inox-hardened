@@ -5,7 +5,7 @@
  
  CHROMIUM_SUFFIX  =
 -CHROMIUM_NAME    = chromium$(CHROMIUM_SUFFIX)
-+CHROMIUM_NAME    = inox$(CHROMIUM_SUFFIX)
++CHROMIUM_NAME    = bnox$(CHROMIUM_SUFFIX)
  CHROMIUM_BINARY  = /usr/lib/$(CHROMIUM_NAME)/$(CHROMIUM_NAME)
  PEPPER_FLASH_DIR = /usr/lib/PepperFlash
  
@@ -16,7 +16,7 @@
        stderr,
        "\n"
 -      "Chromium launcher %s -- for Chromium help, see %s(1)\n"
-+      "Inox launcher %s -- for Inox help, see %s(1)\n"
++      "Bnox launcher %s -- for Bnox help, see %s(1)\n"
        "\n"
        "Custom flags are read from the following file:\n\n"
        "  %s\n\n"

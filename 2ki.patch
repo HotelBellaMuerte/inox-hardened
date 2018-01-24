@@ -1,23 +1,16 @@
 --- a/components/security_interstitials/core/safe_browsing_loud_error_ui.cc	2017-10-11 15:10:28.000000000 -0400
 +++ b/components/security_interstitials/core/safe_browsing_loud_error_ui.cc	2017-10-15 11:16:31.724157664 -0400
-@@ -24,16 +24,16 @@
+@@ -23,11 +23,11 @@
+ // For malware interstitial pages, we link the problematic URL to Google's
  // diagnostic page.
- #if defined(GOOGLE_CHROME_BUILD)
  const char kSbDiagnosticUrl[] =
--    "https://www.google.com/safebrowsing/"
--    "diagnostic?site=%s&client=googlechrome";
-+    "https://dfgdfsgdsfg/dfshdfsg/"
-+    "diagnosdsfgdsfgtic?sidfgte=%s&client=godsfgdfsrome";
- #else
- const char kSbDiagnosticUrl[] =
--    "https://www.google.com/safebrowsing/diagnostic?site=%s&client=chromium";
-+    "https://www.gdfgfdsgle.codfsdm/safebrsgfdsgdfsgowdfsgsing/diagndfgdfgostic?site=%s&client=chromium";
- #endif
+-    "https://transparencyreport.google.com/safe-browsing/search?url=%s";
++    "https://transpadsfgdfsgrencyreport.godsfgogle.cdfsgfdsgom/safe-browsing/search?url=%s";
  
  // Constants for the V4 phishing string upgrades.
  const char kReportPhishingErrorUrl[] =
 -    "https://www.google.com/safebrowsing/report_error/";
-+    "https://www.goosadfasdfdsafgle.com/safebsdafasdfagsrowsing/report_error/";
++    "https://www.sd/fgfdsgsafebrowsing/report_error/";
  
  void RecordExtendedReportingPrefChanged(bool report, bool is_scout) {
    if (is_scout) {

@@ -1,15 +1,12 @@
 --- a/chrome/browser/extensions/external_component_loader.cc	2017-10-04 18:07:34.000000000 -0400
 +++ b/chrome/browser/extensions/external_component_loader.cc	2017-10-08 18:42:24.095944713 -0400
-@@ -34,13 +34,6 @@
+@@ -31,10 +31,6 @@
  
  void ExternalComponentLoader::StartLoading() {
    auto prefs = std::make_unique<base::DictionaryValue>();
 -#if defined(GOOGLE_CHROME_BUILD)
 -  AddExternalExtension(extension_misc::kInAppPaymentsSupportAppId, prefs.get());
 -#endif  // defined(GOOGLE_CHROME_BUILD)
--
--  if (HotwordServiceFactory::IsHotwordAllowed(profile_))
--    AddExternalExtension(extension_misc::kHotwordSharedModuleId, prefs.get());
 -
  #if defined(OS_CHROMEOS)
    {

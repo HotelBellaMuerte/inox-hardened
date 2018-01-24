@@ -14,7 +14,7 @@
          <include name="IDR_HANGOUT_SERVICES_BACKGROUND_HTML" file="hangout_services/background.html" type="BINDATA" />
 --- a/chrome/browser/extensions/signin/gaia_auth_extension_loader.cc
 +++ b/chrome/browser/extensions/signin/gaia_auth_extension_loader.cc
-@@ -42,18 +42,11 @@ extensions::ComponentLoader* GetComponen
+@@ -42,18 +42,11 @@
  void LoadGaiaAuthExtension(BrowserContext* context) {
    DCHECK_CURRENTLY_ON(BrowserThread::UI);
  
@@ -35,7 +35,7 @@
  void UnloadGaiaAuthExtension(BrowserContext* context) {
 --- a/chrome/browser/ui/webui/signin/inline_login_ui.cc
 +++ b/chrome/browser/ui/webui/signin/inline_login_ui.cc
-@@ -44,7 +44,6 @@ content::WebUIDataSource* CreateWebUIDat
+@@ -43,7 +43,6 @@
  
    source->AddResourcePath("inline_login.css", IDR_INLINE_LOGIN_CSS);
    source->AddResourcePath("inline_login.js", IDR_INLINE_LOGIN_JS);
@@ -45,7 +45,7 @@
    source->AddLocalizedString(
 --- a/chrome/browser/browser_resources.grd
 +++ b/chrome/browser/browser_resources.grd
-@@ -323,7 +323,6 @@
+@@ -302,7 +302,6 @@
        <include name="IDR_INLINE_LOGIN_HTML" file="resources\inline_login\inline_login.html" flattenhtml="true" allowexternalscript="true" type="BINDATA" />
        <include name="IDR_INLINE_LOGIN_CSS" file="resources\inline_login\inline_login.css" flattenhtml="true" type="BINDATA" />
        <include name="IDR_INLINE_LOGIN_JS" file="resources\inline_login\inline_login.js" flattenhtml="true" type="BINDATA" />
@@ -53,11 +53,11 @@
        <include name="IDR_INSPECT_CSS" file="resources\inspect\inspect.css" flattenhtml="true" type="BINDATA" />
        <include name="IDR_INSPECT_HTML" file="resources\inspect\inspect.html" flattenhtml="true" allowexternalscript="true" type="BINDATA" />
        <include name="IDR_INSPECT_JS" file="resources\inspect\inspect.js" flattenhtml="true" type="BINDATA" />
-@@ -453,7 +452,6 @@
+@@ -442,7 +441,6 @@
        </if>
        <include name="IDR_WEBSTORE_MANIFEST" file="resources\webstore_app\manifest.json" type="BINDATA" />
        <include name="IDR_CRYPTOTOKEN_MANIFEST" file="resources\cryptotoken\manifest.json" type="BINDATA" />
 -      <include name="IDR_GAIA_AUTH_MANIFEST" file="resources\gaia_auth\manifest.json" type="BINDATA" />
        <if expr="chromeos">
-         <include name="IDR_CHOOSE_MOBILE_NETWORK_HTML" file="resources\chromeos\choose_mobile_network.html" flattenhtml="true" allowexternalscript="true" type="BINDATA" />
-         <include name="IDR_CHOOSE_MOBILE_NETWORK_JS" file="resources\chromeos\choose_mobile_network.js" type="BINDATA" />
+         <include name="IDR_CROSH_BUILTIN_MANIFEST" file="resources\chromeos\crosh_builtin\manifest.json" type="BINDATA" />
+         <include name="IDR_CRYPTOHOME_HTML" file="resources\chromeos\cryptohome.html" flattenhtml="true" type="BINDATA" />
