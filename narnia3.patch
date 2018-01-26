@@ -1,0 +1,11 @@
+--- a/ui/views/view.h	2017-12-20 20:02:03.641896886 -0400
++++ b/ui/views/view.h.new	2017-12-20 20:01:28.914529239 -0400
+@@ -530,7 +530,7 @@
+     SetLayoutManagerImpl(std::move(layout_manager));
+     return lm;
+   }
+-  void SetLayoutManager(nullptr_t);
++  void SetLayoutManager(std::nullptr_t);
+   // DEPRECATED version that takes ownership of a raw pointer.
+   void SetLayoutManager(LayoutManager* layout);
+ 

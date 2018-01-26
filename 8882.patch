@@ -1,0 +1,31 @@
+--- components/ntp_snippets/features.cc	2017-12-15 22:45:22.836082452 -0400
++++ components/ntp_snippets/features.cc.new	2017-12-15 22:46:54.266630878 -0400
+@@ -38,16 +38,16 @@
+     nullptr};
+ 
+ const base::Feature kArticleSuggestionsFeature{
+-    "NTPArticleSuggestions", base::FEATURE_ENABLED_BY_DEFAULT};
++    "NTPArticleSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kBookmarkSuggestionsFeature{
+-    "NTPBookmarkSuggestions", base::FEATURE_ENABLED_BY_DEFAULT};
++    "NTPBookmarkSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kRecentOfflineTabSuggestionsFeature{
+     "NTPOfflinePageSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kIncreasedVisibility{"NTPSnippetsIncreasedVisibility",
+-                                         base::FEATURE_ENABLED_BY_DEFAULT};
++                                         base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kPhysicalWebPageSuggestionsFeature{
+     "NTPPhysicalWebPageSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
+@@ -59,7 +59,7 @@
+                                              base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kCategoryRanker{"ContentSuggestionsCategoryRanker",
+-                                    base::FEATURE_ENABLED_BY_DEFAULT};
++                                    base::FEATURE_DISABLED_BY_DEFAULT};
+ 
+ const base::Feature kPublisherFaviconsFromNewServerFeature{
+     "ContentSuggestionsFaviconsFromNewServer",

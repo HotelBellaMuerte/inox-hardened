@@ -1,0 +1,10 @@
+--- a/ui/views/view.h	2017-12-19 16:06:33.000000000 -0400
++++ b/ui/views/view.h	2017-12-20 19:42:42.892801989 -0400
+@@ -6,6 +6,7 @@
+ #define UI_VIEWS_VIEW_H_
+ 
+ #include <stddef.h>
++#include <cstddef>
+ 
+ #include <algorithm>
+ #include <map>

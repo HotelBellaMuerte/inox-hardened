@@ -1,0 +1,11 @@
+--- a/ui/views/view.cc	2017-12-19 16:06:33.000000000 -0400
++++ b/ui/views/view.cc	2017-12-20 21:16:13.929205946 -0400
+@@ -631,7 +631,7 @@
+   return layout_manager_.get();
+ }
+ 
+-void View::SetLayoutManager(nullptr_t) {
++void View::SetLayoutManager(std::nullptr_t) {
+   SetLayoutManagerImpl(nullptr);
+ }
+ 
