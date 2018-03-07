@@ -1,11 +1,6 @@
 --- a/chrome/browser/ui/browser_ui_prefs.cc	2017-10-08 18:53:28.401765395 -0400
 +++ b/chrome/browser/ui/browser_ui_prefs.cc	2017-10-08 18:53:45.021709829 -0400
-@@ -59,11 +59,11 @@
-   registry->RegisterBooleanPref(prefs::kWebAppCreateInAppsMenu, true);
-   registry->RegisterBooleanPref(prefs::kWebAppCreateInQuickLaunchBar, true);
-   registry->RegisterBooleanPref(
--      prefs::kOfferTranslateEnabled, true,
-+      prefs::kOfferTranslateEnabled, false,
+@@ -63,7 +63,7 @@
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
    registry->RegisterStringPref(prefs::kCloudPrintEmail, std::string());
    registry->RegisterBooleanPref(prefs::kCloudPrintProxyEnabled, true);
@@ -14,14 +9,3 @@
    registry->RegisterBooleanPref(prefs::kDevToolsDisabled, false);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacement);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacementPopup);
-@@ -78,8 +78,8 @@
- #endif
- #if BUILDFLAG(ENABLE_WEBRTC)
-   // TODO(guoweis): Remove next 2 options at M50.
--  registry->RegisterBooleanPref(prefs::kWebRTCMultipleRoutesEnabled, true);
--  registry->RegisterBooleanPref(prefs::kWebRTCNonProxiedUdpEnabled, true);
-+  registry->RegisterBooleanPref(prefs::kWebRTCMultipleRoutesEnabled, false);
-+  registry->RegisterBooleanPref(prefs::kWebRTCNonProxiedUdpEnabled, false);
-   registry->RegisterStringPref(prefs::kWebRTCIPHandlingPolicy,
-                                content::kWebRTCIPHandlingDefault);
-   registry->RegisterStringPref(prefs::kWebRTCUDPPortRange, std::string());

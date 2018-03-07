@@ -1,0 +1,11 @@
+--- a/chrome/browser/vr/sample_queue.h	2018-01-25 16:09:27.000000000 -0400
++++ b/chrome/browser/vr/sample_queue.h.new	2018-01-25 19:50:00.498854747 -0400
+@@ -6,6 +6,8 @@
+ #define CHROME_BROWSER_VR_SAMPLE_QUEUE_H_
+ 
+ #include <vector>
++#include <cstdio>
++#include <cinttypes> 
+ 
+ #include "base/macros.h"
+ 

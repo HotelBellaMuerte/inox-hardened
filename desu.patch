@@ -1,0 +1,111 @@
+From 5ef2475488587c786be4acb091b899f7006dd4e8 Mon Sep 17 00:00:00 2001
+From: Tom Anderson <thomasanderson@chromium.org>
+Date: Wed, 24 Jan 2018 14:09:14 -0800
+Subject: [PATCH] Fix gn CHECK()ing when genering Chromium build files
+
+After r531270, gn chokes while running exec_script():
+
+[0124/122441.126364:FATAL:thread_restrictions.cc(105)] Check failed:
+!g_base_sync_primitives_disallowed.Get().Get().
+
+Gn executes scripts synchronously while loading files, so blocking is necessary.
+This CL adds a ScopedAllowBaseSyncPrimitives for gn to use while waiting for
+exec_script() to complete.  This workaround can be removed once exec_script() is
+removed.
+
+BUG=805628
+R=dpranke,thestig,fdoray
+
+Change-Id: I7ad539a8dee0230c84d94f1c6b37755a890bfcd7
+---
+
+diff --git a/base/threading/thread_restrictions.h b/base/threading/thread_restrictions.h
+index c8b422ba..bdb5dbd 100644
+--- a/base/threading/thread_restrictions.h
++++ b/base/threading/thread_restrictions.h
+@@ -61,6 +61,9 @@
+ class BackendImpl;
+ class InFlightIO;
+ }
++namespace functions {
++class GnExecScriptScopedAllowBaseSyncPrimitives;
++}
+ namespace gpu {
+ class GpuChannelHost;
+ }
+@@ -265,6 +268,7 @@
+   FRIEND_TEST_ALL_PREFIXES(ThreadRestrictionsTest,
+                            ScopedAllowBaseSyncPrimitivesWithBlockingDisallowed);
+   friend class base::GetAppOutputScopedAllowBaseSyncPrimitives;
++  friend class functions::GnExecScriptScopedAllowBaseSyncPrimitives;
+   friend class leveldb::LevelDBMojoProxy;
+   friend class media::BlockingUrlProtocol;
+   friend class net::MultiThreadedCertVerifierScopedAllowBaseSyncPrimitives;
+diff --git a/tools/gn/function_exec_script.cc b/tools/gn/function_exec_script.cc
+index 8c4909c..d72249b1 100644
+--- a/tools/gn/function_exec_script.cc
++++ b/tools/gn/function_exec_script.cc
+@@ -7,6 +7,7 @@
+ #include "base/logging.h"
+ #include "base/strings/string_number_conversions.h"
+ #include "base/strings/utf_string_conversions.h"
++#include "base/threading/thread_restrictions.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
+ #include "tools/gn/err.h"
+@@ -115,6 +116,9 @@
+   exec_script("//foo/bar/myscript.py")
+ )";
+ 
++class GnExecScriptScopedAllowBaseSyncPrimitives
++    : public base::ScopedAllowBaseSyncPrimitives {};
++
+ Value RunExecScript(Scope* scope,
+                     const FunctionCallNode* function,
+                     const std::vector<Value>& args,
+@@ -221,11 +225,15 @@
+   std::string output;
+   std::string stderr_output;
+   int exit_code = 0;
+-  if (!internal::ExecProcess(
+-          cmdline, startup_dir, &output, &stderr_output, &exit_code)) {
+-    *err = Err(function->function(), "Could not execute python.",
+-        "I was trying to execute \"" + FilePathToUTF8(python_path) + "\".");
+-    return Value();
++  {
++    GnExecScriptScopedAllowBaseSyncPrimitives allow_base_sync_primitives;
++    if (!internal::ExecProcess(cmdline, startup_dir, &output, &stderr_output,
++                               &exit_code)) {
++      *err = Err(
++          function->function(), "Could not execute python.",
++          "I was trying to execute \"" + FilePathToUTF8(python_path) + "\".");
++      return Value();
++    }
+   }
+   if (g_scheduler->verbose_logging()) {
+     g_scheduler->Log("Pythoning", script_source.value() + " took " +
+
+From 51479bccd5809f7059a427be80b4d0f5cfd7184f Mon Sep 17 00:00:00 2001
+From: Tom Anderson <thomasanderson@chromium.org>
+Date: Wed, 24 Jan 2018 17:16:56 -0800
+Subject: [PATCH] Fix gn bootstrap
+
+BUG=805488
+R=dpranke
+
+Change-Id: I8a6daa7bbce3fec4eabdeae9b2e7adf7f732813b
+---
+
+diff --git a/tools/gn/bootstrap/bootstrap.py b/tools/gn/bootstrap/bootstrap.py
+index f3391e8..8d61df4 100755
+--- a/tools/gn/bootstrap/bootstrap.py
++++ b/tools/gn/bootstrap/bootstrap.py
+@@ -423,6 +423,8 @@
+       continue
+     if name == 'run_all_unittests.cc':
+       continue
++    if name == 'test_with_scheduler.cc':
++      continue
+     if name == 'gn_main.cc':
+       continue
+     full_path = os.path.join(GN_ROOT, name)

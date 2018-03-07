@@ -1,0 +1,10 @@
+--- a/components/assist_ranker/ranker_example_util.cc	2018-01-18 04:04:59.000000000 -0400
++++ b/components/assist_ranker/ranker_example_util.cc.new	2018-01-18 19:04:01.051285759 -0400
+@@ -8,6 +8,7 @@
+ #include "base/logging.h"
+ #include "base/metrics/metrics_hashes.h"
+ #include "base/strings/stringprintf.h"
++#include <math.h>  
+ 
+ namespace assist_ranker {
+ namespace {

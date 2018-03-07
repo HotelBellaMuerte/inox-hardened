@@ -16,10 +16,10 @@
  
 -#if !defined(OS_ANDROID)
 +
- // Controls if browser side DIAL device discovery is enabled.
- const base::Feature kEnableDialLocalDiscovery{
-     "EnableDialLocalDiscovery", base::FEATURE_DISABLED_BY_DEFAULT};
-@@ -30,9 +30,9 @@
+ // Controls if browser side Cast device discovery is enabled.
+ const base::Feature kEnableCastDiscovery{"EnableCastDiscovery",
+                                          base::FEATURE_DISABLED_BY_DEFAULT};
+@@ -26,9 +26,9 @@
  // Controls if local media casting is enabled.
  const base::Feature kEnableCastLocalMedia{"EnableCastLocalMedia",
                                            base::FEATURE_DISABLED_BY_DEFAULT};
@@ -31,7 +31,7 @@
  namespace {
  const PrefService::Preference* GetMediaRouterPref(
      content::BrowserContext* context) {
-@@ -40,10 +40,10 @@
+@@ -36,10 +36,10 @@
        prefs::kEnableMediaRouter);
  }
  }  // namespace
@@ -44,24 +44,23 @@
    const PrefService::Preference* pref = GetMediaRouterPref(context);
    // Only use the pref value if it set from a mandatory policy.
    if (pref->IsManaged() && !pref->IsDefaultValue()) {
-@@ -54,13 +54,9 @@
- 
+@@ -51,12 +51,9 @@
    // The component extension cannot be loaded in guest sessions.
    // TODO(crbug.com/756243): Figure out why.
--  return !Profile::FromBrowserContext(context)->IsGuestSession();
+   return !Profile::FromBrowserContext(context)->IsGuestSession();
 -#else  // !(defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS))
    return false;
 -#endif  // defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
  }
  
 -#if !defined(OS_ANDROID)
- // Returns true if browser side DIAL discovery is enabled.
- bool DialLocalDiscoveryEnabled() {
-   return base::FeatureList::IsEnabled(kEnableDialLocalDiscovery);
-@@ -76,6 +72,5 @@
+ // Returns true if browser side Cast discovery is enabled.
+ bool CastDiscoveryEnabled() {
+   return base::FeatureList::IsEnabled(kEnableCastDiscovery);
+@@ -66,6 +63,5 @@
+ bool CastLocalMediaEnabled() {
    return base::FeatureList::IsEnabled(kEnableCastLocalMedia);
  }
- 
 -#endif
  
  }  // namespace media_router
