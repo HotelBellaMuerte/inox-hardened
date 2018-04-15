@@ -1,60 +1,18 @@
-diff --git a/DEPS b/DEPS
-index 6193271..84a00a5 100644
---- a/DEPS
-+++ b/DEPS
-@@ -1273,6 +1273,7 @@
-         'src/infra',
-         'src/ppapi',
-         'src/printing',
-+        'src/third_party/blink/tools',  # See http://crbug.com/625877.
-         'src/third_party/catapult',
-         'src/third_party/closure_compiler/build',
-         'src/third_party/WebKit/Tools/Scripts',  # See http://crbug.com/625877.
-diff --git a/third_party/WebKit/Tools/Scripts/OWNERS b/third_party/WebKit/Tools/Scripts/OWNERS
-deleted file mode 100644
-index bfcb9c1..0000000
---- a/third_party/WebKit/Tools/Scripts/OWNERS
-+++ /dev/null
-@@ -1,3 +0,0 @@
--per-file audit-non-blink-usage.py=dcheng@chromium.org
--per-file audit-non-blink-usage.py=haraken@chromium.org
--per-file audit-non-blink-usage.py=jbroman@chromium.org
-diff --git a/third_party/blink/PRESUBMIT.py b/third_party/blink/PRESUBMIT.py
-index 1f8b7c4..676e3d4 100644
---- a/third_party/blink/PRESUBMIT.py
-+++ b/third_party/blink/PRESUBMIT.py
-@@ -16,7 +16,7 @@
-     # pylint: disable=C0103
-     audit_non_blink_usage = imp.load_source(
-         'audit_non_blink_usage',
--        os.path.join(os.path.dirname(inspect.stack()[0][1]), '..', 'WebKit/Tools/Scripts/audit-non-blink-usage.py'))
-+        os.path.join(os.path.dirname(inspect.stack()[0][1]), 'tools/audit_non_blink_usage.py'))
- except IOError:
-     # One of the presubmit upload tests tries to exec this script, which doesn't interact so well
-     # with the import hack... just ignore the exception here and hope for the best.
-diff --git a/third_party/blink/tools/OWNERS b/third_party/blink/tools/OWNERS
-index bc159e2..547e4fb 100644
---- a/third_party/blink/tools/OWNERS
-+++ b/third_party/blink/tools/OWNERS
-@@ -1 +1,5 @@
- file://third_party/WebKit/Tools/OWNERS
+--- a/base/tracked_objects.cc
++++ b/base/tracked_objects.cc
+@@ -897,10 +897,14 @@ void ThreadData::EnsureTlsInitialization
+   // never again change in this process.
+   ++incarnation_counter_;
+ 
++  ThreadData::Status initial_startup_state = DEACTIVATED;
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-profiler"))
++    initial_startup_state = kInitialStartupState;
 +
-+per-file audit_non_blink_usage.py=dcheng@chromium.org
-+per-file audit_non_blink_usage.py=haraken@chromium.org
-+per-file audit_non_blink_usage.py=jbroman@chromium.org
-diff --git a/third_party/WebKit/Tools/Scripts/audit-non-blink-usage.py b/third_party/blink/tools/audit_non_blink_usage.py
-similarity index 98%
-rename from third_party/WebKit/Tools/Scripts/audit-non-blink-usage.py
-rename to third_party/blink/tools/audit_non_blink_usage.py
-index 73e9d97..980702c 100755
---- a/third_party/WebKit/Tools/Scripts/audit-non-blink-usage.py
-+++ b/third_party/blink/tools/audit_non_blink_usage.py
-@@ -12,7 +12,7 @@
- Example command:
+   // The lock is not critical for setting status_, but it doesn't hurt.  It also
+   // ensures that if we have a racy initialization, that we'll bail as soon as
+   // we get the lock earlier in this method.
+-  base::subtle::Release_Store(&status_, kInitialStartupState);
++  base::subtle::Release_Store(&status_, initial_startup_state);
+   DCHECK(base::subtle::NoBarrier_Load(&status_) != UNINITIALIZED);
+ }
  
- $ git ls-files third_party/blink \
--    | python third_party/WebKit/Tools/Scripts/audit-non-blink-usage.py
-+    | python third_party/blink/tools/audit_non_blink_usage.py
- """
- 
- import os
