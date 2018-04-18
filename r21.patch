@@ -1,12 +1,10 @@
-diff --git a/tools/gn/bootstrap/bootstrap.py b/tools/gn/bootstrap/bootstrap.py
-index 601d5331698e..f154ed2ef3e6 100755
---- a/chrome/browser/BUILD.gn
-+++ b/chrome/browser/BUILD.gn
-@@ -4317,7 +4317,6 @@
-   sources = [
-     "predictors/resource_prefetch_predictor.proto",
-   ]
--      public_deps += [ "//chrome/common:service_process_mojom" ]
- }
- 
- grit("resources") {
+--- a/tools/gn/bootstrap/bootstrap.py	2018-02-23 14:04:10.304532371 -0400
++++ b/tools/gn/bootstrap/bootstrap.py.new	2018-02-23 14:21:53.123843268 -0400
+@@ -557,7 +557,6 @@
+       'base/threading/scoped_blocking_call.cc',
+       'base/threading/sequence_local_storage_map.cc',
+       'base/threading/sequenced_task_runner_handle.cc',
+-      'base/threading/sequenced_worker_pool.cc',
+       'base/threading/simple_thread.cc',
+       'base/threading/thread.cc',
+       'base/threading/thread_checker_impl.cc',
