@@ -1,5 +1,5 @@
---- a/rlz/features/features.gni	2017-10-04 18:07:47.000000000 -0400
-+++ b/rlz/features/features.gni	2017-10-08 19:55:06.897039082 -0400
+--- a/rlz/buildflags/buildflags.gni	2017-10-04 18:07:47.000000000 -0400
++++ b/rlz/buildflags/buildflags.gni	2017-10-08 19:55:06.897039082 -0400
 @@ -6,6 +6,6 @@
  
  # Whether we are using the rlz library or not.  Platforms like Android send

@@ -1,21 +1,21 @@
---- a/chrome/browser/search/search.cc	2017-10-04 18:07:35.000000000 -0400
-+++ b/chrome/browser/search/search.cc	2017-10-08 19:22:39.902499353 -0400
-@@ -217,17 +217,7 @@
-       return NewTabURLDetails(local_url, NEW_TAB_URL_VALID);
+--- a/third_party/crashpad/crashpad/compat/linux/sys/ptrace.h
++++ b/third_party/crashpad/crashpad/compat/linux/sys/ptrace.h
+@@ -20,7 +20,8 @@
+ #include <sys/cdefs.h>
  
-     NewTabURLState state = IsValidNewTabURL(profile, search_provider_url);
--    switch (state) {
--      case NEW_TAB_URL_VALID:
--        // We can use the search provider's page.
--        return NewTabURLDetails(search_provider_url, state);
--      case NEW_TAB_URL_INCOGNITO:
--        // Incognito has its own New Tab.
--        return NewTabURLDetails(GURL(), state);
--      default:
--        // Use the local New Tab otherwise.
--        return NewTabURLDetails(local_url, state);
--    }
-+    return NewTabURLDetails(local_url, state);
-   }
+ // https://sourceware.org/bugzilla/show_bug.cgi?id=22433
+-#if !defined(PTRACE_GET_THREAD_AREA) && defined(__GLIBC__)
++#if !defined(PTRACE_GET_THREAD_AREA) && !defined(PT_GET_THREAD_AREA) && \
++    defined(__GLIBC__)
+ #if defined(__i386__) || defined(__x86_64__)
+ static constexpr __ptrace_request PTRACE_GET_THREAD_AREA =
+     static_cast<__ptrace_request>(25);
+@@ -30,7 +31,7 @@
+     static_cast<__ptrace_request>(22);
+ #define PTRACE_GET_THREAD_AREA PTRACE_GET_THREAD_AREA
+ #endif
+-#endif  // !PTRACE_GET_THREAD_AREA && defined(__GLIBC__)
++#endif  // !PTRACE_GET_THREAD_AREA && !PT_GET_THREAD_AREA && defined(__GLIBC__)
  
-   GURL url;
+ // https://sourceware.org/bugzilla/show_bug.cgi?id=22433
+ #if !defined(PTRACE_GETVFPREGS) && \

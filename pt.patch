@@ -1,16 +1,11 @@
-# Disables WebRTC log uploading to Google
-
---- a/content/common/BUILD.gn	2017-12-08 16:20:49.640051414 -0400
-+++ b/content/common/BUILD.gn	2017-12-08 16:21:50.453851786 -0400
-@@ -258,11 +258,6 @@
-     "presentation/presentation_struct_traits.cc",
-     "presentation/presentation_struct_traits.h",
-     "process_type.cc",
--    "quarantine/quarantine.cc",
--    "quarantine/quarantine_constants_linux.h",
--    "quarantine/quarantine_linux.cc",
--    "quarantine/quarantine_mac.mm",
--    "quarantine/quarantine_win.cc",
-     "render_widget_surface_properties.cc",
-     "render_widget_surface_properties.h",
-     "resize_params.cc",
+--- a/components/policy/core/common/cloud/cloud_policy_util.cc	2018-04-03 03:04:52.000000000 -0400
++++ b/components/policy/core/common/cloud/cloud_policy_util.cc.new	2018-04-03 12:34:22.432522012 -0400
+@@ -6,6 +6,8 @@
+ 
+ #include "build/build_config.h"
+ 
++#include <limits.h>
++
+ #if defined(OS_WIN)
+ #include <Windows.h>  // For GetComputerNameW()
+ #endif
