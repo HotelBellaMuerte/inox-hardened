@@ -9,3 +9,15 @@
  };
  
  enum class NetworkPredictionStatus {
+
+--- a/chrome/browser/io_thread.cc
++++ b/chrome/browser/io_thread.cc
+@@ -615,7 +615,7 @@ void IOThread::RegisterPrefs(PrefRegistrySimple* registry) {
+                                std::string());
+   registry->RegisterBooleanPref(prefs::kEnableReferrers, true);
+   data_reduction_proxy::RegisterPrefs(registry);
+-  registry->RegisterBooleanPref(prefs::kBuiltInDnsClientEnabled, true);
++  registry->RegisterBooleanPref(prefs::kBuiltInDnsClientEnabled, false);
+   registry->RegisterListPref(prefs::kDnsOverHttpsServers);
+   registry->RegisterListPref(prefs::kDnsOverHttpsServerMethods);
+   registry->RegisterBooleanPref(prefs::kQuickCheckEnabled, true);

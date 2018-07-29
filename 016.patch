@@ -4,8 +4,8 @@
          </paper-button>
        </div>
        <div slot="footer">
--        <paper-checkbox id="sendSettings" checked>
-+        <paper-checkbox id="sendSettings">
-           $i18nRaw{resetPageFeedback}</paper-checkbox>
+-        <cr-checkbox id="sendSettings" checked>
++        <cr-checkbox id="sendSettings">
+           $i18nRaw{resetPageFeedback}</cr-checkbox>
        </div>
-     </dialog>
+     </cr-dialog>

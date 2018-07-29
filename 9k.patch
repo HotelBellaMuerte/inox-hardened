@@ -1,313 +1,112 @@
---- a/chrome/browser/about_flags.cc
-+++ b/chrome/browser/about_flags.cc
-@@ -1131,6 +1131,11 @@ const FeatureEntry::Choice kAsyncImageDe
- //
- // When adding a new choice, add it to the end of the list.
- const FeatureEntry kFeatureEntries[] = {
-+    {"enable-metrics",
-+     "Record metrics",
-+     "Record histograms and user actions.",
-+     kOsAll, SINGLE_VALUE_TYPE("enable-metrics")},
+From c6b0194f7a4d9f494b2d51f46d2c332e2e5f4050 Mon Sep 17 00:00:00 2001
+From: Daniel Bratell <bratell@opera.com>
+Date: Mon, 28 May 2018 13:13:01 +0000
+Subject: [PATCH] Use the same libjpeg in all of blink/platform
+
+The normal libjpeg renames some symbols with macros so if its
+headers are included together with libjpeg-turbo's headers
+in the same translation unit, there will be an inconsistent
+renaming of libjpeg symbols. This happened in some extreme
+jumbo configuration and resulted in confising linker errors.
+
+This patch changes an include so that jpeglib.h becomes included
+the same way everywhere.
+
+Change-Id: I7f122d0919d58371bb40dc0097a766b857b9815e
+Reviewed-on: https://chromium-review.googlesource.com/1073423
+Reviewed-by: Kentaro Hara <haraken@chromium.org>
+Commit-Queue: Daniel Bratell <bratell@opera.com>
+Cr-Commit-Position: refs/heads/master@{#562243}
+---
+ .../renderer/platform/image-encoders/image_encoder.cc | 11 +++++++++++
+ .../renderer/platform/image-encoders/image_encoder.h  |  2 --
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/third_party/blink/renderer/platform/image-encoders/image_encoder.cc b/third_party/blink/renderer/platform/image-encoders/image_encoder.cc
+index 0c7f14c7c0e4..4c450f5d6783 100644
+--- a/third_party/blink/renderer/platform/image-encoders/image_encoder.cc
++++ b/third_party/blink/renderer/platform/image-encoders/image_encoder.cc
+@@ -4,6 +4,17 @@
+ 
+ #include "third_party/blink/renderer/platform/image-encoders/image_encoder.h"
+ 
++#include "build/build_config.h"
 +
-     {"ignore-gpu-blacklist", flag_descriptions::kIgnoreGpuBlacklistName,
-      flag_descriptions::kIgnoreGpuBlacklistDescription, kOsAll,
-      SINGLE_VALUE_TYPE(switches::kIgnoreGpuBlacklist)},
---- a/base/metrics/histogram_base.h
-+++ b/base/metrics/histogram_base.h
-@@ -84,6 +84,12 @@ BASE_EXPORT HistogramBase* DeserializeHi
- 
- class BASE_EXPORT HistogramBase {
-  public:
-+  // Allow histograms to be disabled.
-+  static const std::string& kDummyName;
-+  static const std::string& kDummySparseName;
-+  static bool MetricsEnabled();
-+  bool enabled = false;
++#if defined(OS_WIN)
++#include <basetsd.h>  // Included before jpeglib.h because of INT32 clash
++#endif                // OS_WIN
++#include <stdio.h>    // Needed by jpeglib.h
 +
-   typedef int32_t Sample;                // Used for samples.
-   typedef subtle::Atomic32 AtomicCount;  // Used to count samples.
-   typedef int32_t Count;  // Used to manipulate counts in temporaries.
---- a/base/metrics/histogram_base.cc
-+++ b/base/metrics/histogram_base.cc
-@@ -9,6 +9,7 @@
- #include <memory>
- #include <utility>
- 
-+#include "base/command_line.h"
- #include "base/json/json_string_value_serializer.h"
- #include "base/logging.h"
- #include "base/metrics/histogram.h"
-@@ -60,6 +61,12 @@ HistogramBase* DeserializeHistogramInfo(
-   }
- }
- 
-+const std::string& HistogramBase::kDummyName = "Dummy";
-+const std::string& HistogramBase::kDummySparseName = "DummySparse";
-+bool HistogramBase::MetricsEnabled() {
-+  return base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics");
-+}
++#include "jpeglib.h"  // for JPEG_MAX_DIMENSION
 +
- const HistogramBase::Sample HistogramBase::kSampleType_MAX = INT_MAX;
- HistogramBase* HistogramBase::report_histogram_ = nullptr;
- 
---- a/base/metrics/histogram.cc
-+++ b/base/metrics/histogram.cc
-@@ -124,7 +124,8 @@ class Histogram::Factory {
-       minimum_(minimum),
-       maximum_(maximum),
-       bucket_count_(bucket_count),
--      flags_(flags) {}
-+      flags_(flags),
-+      enabled_(HistogramBase::MetricsEnabled()) {}
- 
-   // Create a BucketRanges structure appropriate for this histogram.
-   virtual BucketRanges* CreateRanges() {
-@@ -154,13 +155,18 @@ class Histogram::Factory {
-   HistogramBase::Sample maximum_;
-   uint32_t bucket_count_;
-   int32_t flags_;
-+  const bool enabled_;
- 
-  private:
-   DISALLOW_COPY_AND_ASSIGN(Factory);
- };
- 
- HistogramBase* Histogram::Factory::Build() {
--  HistogramBase* histogram = StatisticsRecorder::FindHistogram(name_);
-+  std::string overridden_name = HistogramBase::kDummyName;
-+  if (enabled_)
-+    overridden_name = name_;
++#include "third_party/libwebp/src/webp/encode.h"  // for WEBP_MAX_DIMENSION
 +
-+  HistogramBase* histogram = StatisticsRecorder::FindHistogram(overridden_name);
-   if (!histogram) {
-     // To avoid racy destruction at shutdown, the following will be leaked.
-     const BucketRanges* created_ranges = CreateRanges();
-@@ -191,7 +197,7 @@ HistogramBase* Histogram::Factory::Build
-     if (allocator) {
-       tentative_histogram = allocator->AllocateHistogram(
-           histogram_type_,
--          name_,
-+          overridden_name,
-           minimum_,
-           maximum_,
-           registered_ranges,
-@@ -232,6 +238,10 @@ HistogramBase* Histogram::Factory::Build
-     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
-   }
+ namespace blink {
  
-+  if (!enabled_)
-+    return histogram;
-+
-+  histogram->enabled = true;
-   CHECK_EQ(histogram_type_, histogram->GetHistogramType()) << name_;
-   if (bucket_count_ != 0 &&
-       !histogram->HasConstructionArguments(minimum_, maximum_, bucket_count_)) {
-@@ -464,10 +474,16 @@ bool Histogram::HasConstructionArguments
- }
+ bool ImageEncoder::Encode(Vector<unsigned char>* dst,
+diff --git a/third_party/blink/renderer/platform/image-encoders/image_encoder.h b/third_party/blink/renderer/platform/image-encoders/image_encoder.h
+index 0d1460f34827..40306097d507 100644
+--- a/third_party/blink/renderer/platform/image-encoders/image_encoder.h
++++ b/third_party/blink/renderer/platform/image-encoders/image_encoder.h
+@@ -7,8 +7,6 @@
  
- void Histogram::Add(int value) {
-+  if (!enabled)
-+    return;
-+
-   AddCount(value, 1);
- }
+ #include "third_party/blink/renderer/platform/platform_export.h"
+ #include "third_party/blink/renderer/platform/wtf/vector.h"
+-#include "third_party/libjpeg/jpeglib.h"          // for JPEG_MAX_DIMENSION
+-#include "third_party/libwebp/src/webp/encode.h"  // for WEBP_MAX_DIMENSION
+ #include "third_party/skia/include/core/SkStream.h"
+ #include "third_party/skia/include/encode/SkJpegEncoder.h"
+ #include "third_party/skia/include/encode/SkPngEncoder.h"
+-- 
+2.17.1
+
+From 01d891fa0790950549c7bedb34edf869827a372e Mon Sep 17 00:00:00 2001
+From: Jose Dapena Paz <jose.dapena@lge.com>
+Date: Thu, 31 May 2018 17:03:37 +0000
+Subject: [PATCH] CORS legacy: add missing string include
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The cors_legacy.h file includes declarations using std::string, but
+it is not declared due to missing #include <string>.
+
+Also drop unneeded declarations in .cpp file.
+
+Change-Id: I00df799f84a6c3530c2f12f1e52d24c7d9bd6bfd
+Reviewed-on: https://chromium-review.googlesource.com/1080707
+Reviewed-by: Tom Sepez <tsepez@chromium.org>
+Commit-Queue: José Dapena Paz <jose.dapena@lge.com>
+Cr-Commit-Position: refs/heads/master@{#563282}
+---
+ services/network/public/cpp/cors/cors_legacy.cc | 2 --
+ services/network/public/cpp/cors/cors_legacy.h  | 1 +
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/services/network/public/cpp/cors/cors_legacy.cc b/services/network/public/cpp/cors/cors_legacy.cc
+index 8f32ac3be64e..f01af63619b5 100644
+--- a/services/network/public/cpp/cors/cors_legacy.cc
++++ b/services/network/public/cpp/cors/cors_legacy.cc
+@@ -5,8 +5,6 @@
+ #include "services/network/public/cpp/cors/cors_legacy.h"
  
- void Histogram::AddCount(int value, int count) {
-+  if (!enabled)
-+    return;
-+
-   DCHECK_EQ(0, ranges(0));
-   DCHECK_EQ(kSampleType_MAX, ranges(bucket_count()));
+ #include <algorithm>
+-#include <string>
+-#include <vector>
  
-@@ -522,10 +538,16 @@ std::unique_ptr<HistogramSamples> Histog
- }
+ #include "url/gurl.h"
+ #include "url/url_util.h"
+diff --git a/services/network/public/cpp/cors/cors_legacy.h b/services/network/public/cpp/cors/cors_legacy.h
+index d2cdf026ca3a..dc9295a92c47 100644
+--- a/services/network/public/cpp/cors/cors_legacy.h
++++ b/services/network/public/cpp/cors/cors_legacy.h
+@@ -5,6 +5,7 @@
+ #ifndef SERVICES_NETWORK_PUBLIC_CPP_CORS_CORS_LEGACY_H_
+ #define SERVICES_NETWORK_PUBLIC_CPP_CORS_CORS_LEGACY_H_
  
- void Histogram::AddSamples(const HistogramSamples& samples) {
-+  if (!enabled)
-+    return;
-+
-   unlogged_samples_->Add(samples);
- }
- 
- bool Histogram::AddSamplesFromPickle(PickleIterator* iter) {
-+  if (!enabled)
-+    return true;
-+
-   return unlogged_samples_->AddFromPickle(iter);
- }
- 
---- a/base/metrics/sparse_histogram.cc
-+++ b/base/metrics/sparse_histogram.cc
-@@ -24,7 +24,12 @@ typedef HistogramBase::Sample Sample;
- // static
- HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
-                                            int32_t flags) {
--  HistogramBase* histogram = StatisticsRecorder::FindHistogram(name);
-+  const bool enabled_ = HistogramBase::MetricsEnabled();
-+  std::string overridden_name = HistogramBase::kDummySparseName;
-+  if (enabled_)
-+    overridden_name = name;
-+
-+  HistogramBase* histogram = StatisticsRecorder::FindHistogram(overridden_name);
-   if (!histogram) {
-     // Try to create the histogram using a "persistent" allocator. As of
-     // 2016-02-25, the availability of such is controlled by a base::Feature
-@@ -36,7 +41,7 @@ HistogramBase* SparseHistogram::FactoryG
-     PersistentHistogramAllocator* allocator = GlobalHistogramAllocator::Get();
-     if (allocator) {
-       tentative_histogram = allocator->AllocateHistogram(
--          SPARSE_HISTOGRAM, name, 0, 0, nullptr, flags, &histogram_ref);
-+          SPARSE_HISTOGRAM, overridden_name, 0, 0, nullptr, flags, &histogram_ref);
-     }
- 
-     // Handle the case where no persistent allocator is present or the
-@@ -45,7 +50,7 @@ HistogramBase* SparseHistogram::FactoryG
-       DCHECK(!histogram_ref);  // Should never have been set.
-       DCHECK(!allocator);      // Shouldn't have failed.
-       flags &= ~HistogramBase::kIsPersistent;
--      tentative_histogram.reset(new SparseHistogram(name));
-+      tentative_histogram.reset(new SparseHistogram(overridden_name));
-       tentative_histogram->SetFlags(flags);
-     }
- 
-@@ -68,6 +73,10 @@ HistogramBase* SparseHistogram::FactoryG
-     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
-   }
- 
-+  if (!enabled_)
-+    return histogram;
-+
-+  histogram->enabled = true;
-   CHECK_EQ(SPARSE_HISTOGRAM, histogram->GetHistogramType());
-   return histogram;
- }
-@@ -101,10 +110,16 @@ bool SparseHistogram::HasConstructionArg
- }
- 
- void SparseHistogram::Add(Sample value) {
-+  if (!enabled)
-+    return;
-+
-   AddCount(value, 1);
- }
- 
- void SparseHistogram::AddCount(Sample value, int count) {
-+  if (!enabled)
-+    return;
-+
-   if (count <= 0) {
-     NOTREACHED();
-     return;
-@@ -150,11 +165,17 @@ std::unique_ptr<HistogramSamples> Sparse
- }
- 
- void SparseHistogram::AddSamples(const HistogramSamples& samples) {
-+  if (!enabled)
-+    return;
-+
-   base::AutoLock auto_lock(lock_);
-   unlogged_samples_->Add(samples);
- }
- 
- bool SparseHistogram::AddSamplesFromPickle(PickleIterator* iter) {
-+  if (!enabled)
-+    return true;
-+
-   base::AutoLock auto_lock(lock_);
-   return unlogged_samples_->AddFromPickle(iter);
- }
---- a/base/metrics/user_metrics.cc
-+++ b/base/metrics/user_metrics.cc
-@@ -9,6 +9,7 @@
++#include <string>
  #include <vector>
  
- #include "base/bind.h"
-+#include "base/command_line.h"
- #include "base/lazy_instance.h"
- #include "base/location.h"
- #include "base/macros.h"
-@@ -24,11 +25,21 @@ LazyInstance<scoped_refptr<SingleThreadT
- 
- }  // namespace
- 
-+static bool MetricsEnabled() {
-+  return base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics");
-+}
-+
- void RecordAction(const UserMetricsAction& action) {
-+  if (!MetricsEnabled())
-+    return;
-+
-   RecordComputedAction(action.str_);
- }
- 
- void RecordComputedAction(const std::string& action) {
-+  if (!MetricsEnabled())
-+    return;
-+
-   if (!g_task_runner.Get()) {
-     DCHECK(g_callbacks.Get().empty());
-     return;
-@@ -46,6 +57,9 @@ void RecordComputedAction(const std::str
- }
- 
- void AddActionCallback(const ActionCallback& callback) {
-+  if (!MetricsEnabled())
-+    return;
-+
-   // Only allow adding a callback if the task runner is set.
-   DCHECK(g_task_runner.Get());
-   DCHECK(g_task_runner.Get()->BelongsToCurrentThread());
---- a/components/metrics/metrics_service.cc
-+++ b/components/metrics/metrics_service.cc
-@@ -131,6 +131,7 @@
- 
- #include "base/bind.h"
- #include "base/callback.h"
-+#include "base/command_line.h"
- #include "base/location.h"
- #include "base/memory/ptr_util.h"
- #include "base/metrics/histogram_base.h"
-@@ -853,6 +854,8 @@ bool MetricsService::UmaMetricsProperlyS
- void MetricsService::RegisterMetricsProvider(
-     std::unique_ptr<MetricsProvider> provider) {
-   DCHECK_EQ(INITIALIZED, state_);
-+  if (!base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics"))
-+    return;
-   metrics_providers_.push_back(std::move(provider));
- }
- 
---- a/chrome/browser/ui/tab_helpers.cc
-+++ b/chrome/browser/ui/tab_helpers.cc
-@@ -201,13 +201,17 @@ void TabHelpers::AttachTabHelpers(WebCon
-   HistoryTabHelper::CreateForWebContents(web_contents);
-   InfoBarService::CreateForWebContents(web_contents);
-   InstallableManager::CreateForWebContents(web_contents);
--  metrics::RendererUptimeWebContentsObserver::CreateForWebContents(
--      web_contents);
-+  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics")) {
-+    metrics::RendererUptimeWebContentsObserver::CreateForWebContents(
-+        web_contents);
-+  }
-   if (content::IsBrowserSideNavigationEnabled())
-     MixedContentSettingsTabHelper::CreateForWebContents(web_contents);
-   NavigationCorrectionTabObserver::CreateForWebContents(web_contents);
--  NavigationMetricsRecorder::CreateForWebContents(web_contents);
--  chrome::InitializePageLoadMetricsForWebContents(web_contents);
-+  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics")) {
-+    NavigationMetricsRecorder::CreateForWebContents(web_contents);
-+    chrome::InitializePageLoadMetricsForWebContents(web_contents);
-+  }
-   PermissionRequestManager::CreateForWebContents(web_contents);
-   PopupBlockerTabHelper::CreateForWebContents(web_contents);
-   PrefsTabHelper::CreateForWebContents(web_contents);
-@@ -265,7 +269,8 @@ void TabHelpers::AttachTabHelpers(WebCon
- 
- #if defined(OS_WIN) || defined(OS_MACOSX) || \
-     (defined(OS_LINUX) && !defined(OS_CHROMEOS))
--  metrics::DesktopSessionDurationObserver::CreateForWebContents(web_contents);
-+  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-metrics"))
-+    metrics::DesktopSessionDurationObserver::CreateForWebContents(web_contents);
- #endif
- 
- // --- Feature tab helpers behind flags ---
+ #include "base/component_export.h"
+-- 
+2.17.1

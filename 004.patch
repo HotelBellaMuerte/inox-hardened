@@ -1,10 +1,11 @@
---- a/chrome/browser/extensions/component_loader.cc	2017-10-04 18:07:34.000000000 -0400
-+++ b/chrome/browser/extensions/component_loader.cc	2017-10-08 18:40:32.613375762 -0400
-@@ -434,11 +434,6 @@
-   if (!IsNormalSession())
+--- a/chrome/browser/extensions/component_loader.cc	2018-05-01 
+03:04:58.000000000 -0400
++++ b/chrome/browser/extensions/component_loader.cc.new	2018-05-01 
+13:04:43.456738461 -0400
+@@ -421,10 +421,6 @@
      return;
  #endif
--
+ 
 -  AddWithNameAndDescription(
 -      IDR_WEBSTORE_MANIFEST, base::FilePath(FILE_PATH_LITERAL("web_store")),
 -      l10n_util::GetStringUTF8(IDS_WEBSTORE_NAME_STORE),
@@ -12,10 +13,10 @@
  }
  
  scoped_refptr<const Extension> ComponentLoader::CreateExtension(
-@@ -493,11 +488,6 @@
-     Add(IDR_BOOKMARKS_MANIFEST,
-         base::FilePath(FILE_PATH_LITERAL("bookmark_manager")));
+@@ -467,11 +463,6 @@
    }
+ #else  // defined(OS_CHROMEOS)
+   DCHECK(!skip_session_components);
 -#if BUILDFLAG(ENABLE_PRINTING)
 -  // Cloud Print component app. Not required on Chrome OS.
 -  Add(IDR_CLOUDPRINT_MANIFEST,
@@ -24,11 +25,10 @@
  #endif  // defined(OS_CHROMEOS)
  
    if (!skip_session_components) {
-@@ -575,13 +565,6 @@
-     AddHotwordAudioVerificationApp();
-     AddHotwordHelperExtension();
+@@ -548,12 +539,6 @@
+     AddHangoutServicesExtension();
      AddImageLoaderExtension();
--
+ 
 -    bool install_feedback = enable_background_extensions_during_testing;
 -#if defined(GOOGLE_CHROME_BUILD)
 -    install_feedback = true;

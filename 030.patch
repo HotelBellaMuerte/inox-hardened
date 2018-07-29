@@ -8,12 +8,10 @@
  }
  
  bool SpellcheckHunspellDictionary::IsReady() const {
-@@ -401,9 +400,6 @@
-     }
- 
+@@ -403,7 +402,6 @@
      if (browser_context_) {
--      // Download from the UI thread to check that |browser_context_| is
--      // still valid.
+       // Download from the UI thread to check that |browser_context_| is
+       // still valid.
 -      DownloadDictionary(GetDictionaryURL());
        return;
      }

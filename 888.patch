@@ -1,7 +1,9 @@
---- a/components/ntp_snippets/features.cc
-+++ b/components/ntp_snippets/features.cc
-@@ -38,16 +38,16 @@ const base::Feature* const kAllFeatures[] = {
-     nullptr};
+--- a/components/ntp_snippets/features.cc	2018-05-06 
+03:04:40.000000000 -0400
++++ b/components/ntp_snippets/features.cc.new	2018-05-06 
+12:05:57.370750274 -0400
+@@ -39,13 +39,13 @@
+     "NTPArticleSuggestionsExpandableHeader", base::FEATURE_DISABLED_BY_DEFAULT};
  
  const base::Feature kArticleSuggestionsFeature{
 -    "NTPArticleSuggestions", base::FEATURE_ENABLED_BY_DEFAULT};
@@ -11,12 +13,9 @@
 -    "NTPBookmarkSuggestions", base::FEATURE_ENABLED_BY_DEFAULT};
 +    "NTPBookmarkSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
  
- const base::Feature kRecentOfflineTabSuggestionsFeature{
-     "NTPOfflinePageSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
- 
  const base::Feature kIncreasedVisibility{"NTPSnippetsIncreasedVisibility",
 -                                         base::FEATURE_ENABLED_BY_DEFAULT};
 +                                         base::FEATURE_DISABLED_BY_DEFAULT};
  
- const base::Feature kPhysicalWebPageSuggestionsFeature{
-     "NTPPhysicalWebPageSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};
+ const base::Feature kForeignSessionsSuggestionsFeature{
+     "NTPForeignSessionsSuggestions", base::FEATURE_DISABLED_BY_DEFAULT};

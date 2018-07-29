@@ -1,17 +1,19 @@
---- a/chrome/browser/ui/browser_ui_prefs.cc	2018-06-21 21:25:48.222493615 -0400
-+++ b/chrome/browser/ui/browser_ui_prefs.cc.new	2018-06-21 21:26:37.892817082 -0400
+--- a/chrome/browser/ui/browser_ui_prefs.cc	2018-06-21 
+21:22:12.661091321 -0400
++++ b/chrome/browser/ui/browser_ui_prefs.cc.new	2018-06-21 
+21:24:27.148632573 -0400
 @@ -74,7 +74,7 @@
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
    registry->RegisterStringPref(prefs::kCloudPrintEmail, std::string());
    registry->RegisterBooleanPref(prefs::kCloudPrintProxyEnabled, true);
 -  registry->RegisterBooleanPref(prefs::kCloudPrintSubmitEnabled, true);
 +  registry->RegisterBooleanPref(prefs::kCloudPrintSubmitEnabled, false);
-   registry->RegisterBooleanPref(prefs::kDevToolsDisabled, false);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacement);
    registry->RegisterDictionaryPref(prefs::kBrowserWindowPlacementPopup);
-@@ -89,10 +89,10 @@
+   registry->RegisterDictionaryPref(prefs::kAppWindowPlacement);
+@@ -87,10 +87,10 @@
+                                 false);
  #endif
- #if BUILDFLAG(ENABLE_WEBRTC)
    // TODO(guoweis): Remove next 2 options at M50.
 -  registry->RegisterBooleanPref(prefs::kWebRTCMultipleRoutesEnabled, true);
 -  registry->RegisterBooleanPref(prefs::kWebRTCNonProxiedUdpEnabled, true);
@@ -21,5 +23,5 @@
 -                               content::kWebRTCIPHandlingDefault);
 +                               content::kWebRTCIPHandlingDisableNonProxiedUdp);
    registry->RegisterStringPref(prefs::kWebRTCUDPPortRange, std::string());
- #endif
  
+   // Dictionaries to keep track of default tasks in the file browser.

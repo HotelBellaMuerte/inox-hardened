@@ -14,7 +14,7 @@
          <include name="IDR_HANGOUT_SERVICES_BACKGROUND_HTML" file="hangout_services/background.html" type="BINDATA" />
 --- a/chrome/browser/extensions/signin/gaia_auth_extension_loader.cc
 +++ b/chrome/browser/extensions/signin/gaia_auth_extension_loader.cc
-@@ -42,18 +42,11 @@
+@@ -42,18 +42,12 @@
  void LoadGaiaAuthExtension(BrowserContext* context) {
    DCHECK_CURRENTLY_ON(BrowserThread::UI);
  
@@ -27,7 +27,7 @@
 -    component_loader->Add(IDR_GAIA_AUTH_MANIFEST, auth_extension_path);
      return;
    }
--
+ 
 -  component_loader->Add(IDR_GAIA_AUTH_MANIFEST,
 -                        base::FilePath(FILE_PATH_LITERAL("gaia_auth")));
  }
