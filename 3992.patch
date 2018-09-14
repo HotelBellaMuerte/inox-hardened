@@ -2,16 +2,18 @@
 2018-05-20 13:30:39.941668362 -0400
 +++ b/chrome/browser/media/router/media_router_feature.cc.new	
 2018-05-20 13:33:31.976474960 -0400
-@@ -11,33 +11,24 @@
+@@ -11,21 +11,16 @@
  #include "extensions/buildflags/buildflags.h"
  #include "ui/base/ui_features.h"
  
 -#if defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
+ #include "chrome/common/chrome_features.h"
  #include "chrome/common/pref_names.h"
  #include "components/prefs/pref_service.h"
  #include "components/user_prefs/user_prefs.h"
+ #include "ui/base/ui_base_features.h"
 -#endif  // defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
--
+ 
 -#if !defined(OS_ANDROID)
  #include "components/prefs/pref_registry_simple.h"
 -#endif
@@ -22,22 +24,17 @@
  // Controls if browser side DialMediaRouteProvider is enabled.
  const base::Feature kDialMediaRouteProvider{"DialMediaRouteProvider",
                                              base::FEATURE_DISABLED_BY_DEFAULT};
- 
- // Controls if browser side Cast device discovery is enabled.
- const base::Feature kEnableCastDiscovery{"EnableCastDiscovery",
--                                         base::FEATURE_ENABLED_BY_DEFAULT};
-+                                         base::FEATURE_DISABLED_BY_DEFAULT};
- 
+@@ -37,9 +32,7 @@
  const base::Feature kCastMediaRouteProvider{"CastMediaRouteProvider",
                                              base::FEATURE_DISABLED_BY_DEFAULT};
  
 -#endif
--
+ 
 -#if defined(OS_ANDROID) || BUILDFLAG(ENABLE_EXTENSIONS)
  namespace {
  const PrefService::Preference* GetMediaRouterPref(
      content::BrowserContext* context) {
-@@ -45,10 +36,8 @@
+@@ -47,10 +40,8 @@
        ::prefs::kEnableMediaRouter);
  }
  }  // namespace
@@ -48,7 +45,7 @@
    const PrefService::Preference* pref = GetMediaRouterPref(context);
    // Only use the pref value if it set from a mandatory policy.
    if (pref->IsManaged() && !pref->IsDefaultValue()) {
-@@ -59,13 +48,9 @@
+@@ -61,13 +52,9 @@
  
    // The component extension cannot be loaded in guest sessions.
    // TODO(crbug.com/756243): Figure out why.
@@ -62,7 +59,7 @@
  void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
    registry->RegisterBooleanPref(prefs::kMediaRouterCastAllowAllIPs, false,
                                  PrefRegistry::PUBLIC);
-@@ -101,12 +86,7 @@
+@@ -103,29 +90,13 @@
  }
  
  bool PresentationReceiverWindowEnabled() {
@@ -72,6 +69,23 @@
    return true;
 -#endif
  }
+ 
+ bool ShouldUseViewsDialog() {
+-#if defined(OS_MACOSX)
+-#if BUILDFLAG(MAC_VIEWS_BROWSER)
+-  // Cocoa browser is disabled if kExperimentalUi is enabled.
+-  return (base::FeatureList::IsEnabled(features::kViewsCastDialog) &&
+-          !features::IsViewsBrowserCocoa()) ||
+-         base::FeatureList::IsEnabled(features::kExperimentalUi);
+-#else   // !BUILDFLAG(MAC_VIEWS_BROWSER)
+-  return false;
+-#endif  // BUILDFLAG(MAC_VIEWS_BROWSER)
+-#else   // !defined(OS_MACOSX)
+   return base::FeatureList::IsEnabled(features::kViewsCastDialog) ||
+          base::FeatureList::IsEnabled(features::kExperimentalUi);
+-#endif  // defined(OS_MACOSX)
+ }
+ 
 -#endif  // !defined(OS_ANDROID)
  
  }  // namespace media_router

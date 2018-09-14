@@ -2,7 +2,7 @@
 -0400
 +++ b/chrome/browser/ui/chrome_pages.cc.new	2018-04-28 
 19:59:09.964119903 -0400
-@@ -77,12 +77,6 @@
+@@ -72,12 +72,6 @@
    ShowSingletonTabOverwritingNTP(browser, std::move(params));
  }
  
@@ -15,7 +15,7 @@
  // Shows either the help app or the appropriate help page for |source|. If
  // |browser| is NULL and the help page is used (vs the app), the help page is
  // shown in the last active browser. If there is no such browser, a new browser
-@@ -397,6 +391,7 @@
+@@ -384,6 +378,7 @@
  #if !defined(OS_ANDROID)
  void ShowBrowserSignin(Browser* browser,
                         signin_metrics::AccessPoint access_point) {
@@ -23,7 +23,7 @@
    Profile* original_profile = browser->profile()->GetOriginalProfile();
    SigninManagerBase* manager =
        SigninManagerFactory::GetForProfile(original_profile);
-@@ -437,14 +432,8 @@
+@@ -424,17 +419,8 @@
              access_point, signin_metrics::Reason::REASON_SIGNIN_PRIMARY_ACCOUNT,
              false));
      DCHECK_GT(browser->tab_strip_model()->count(), 0);
@@ -31,8 +31,11 @@
 -#if defined(OS_CHROMEOS)
 -    NOTREACHED();
 -#else
--    browser->signin_view_controller()->ShowSignin(
--        profiles::BUBBLE_VIEW_MODE_GAIA_SIGNIN, browser, access_point);
+-    profiles::BubbleViewMode bubble_view_mode =
+-        manager->IsAuthenticated() ? profiles::BUBBLE_VIEW_MODE_GAIA_REAUTH
+-                                   : profiles::BUBBLE_VIEW_MODE_GAIA_SIGNIN;
+-    browser->signin_view_controller()->ShowSignin(bubble_view_mode, browser,
+-                                                  access_point);
 -#endif
 -  }
 +  } 

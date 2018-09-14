@@ -269,15 +269,26 @@ diff --git a/third_party/blink/renderer/modules/webaudio/audio_buffer.idl b/thir
 diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/third_party/blink/renderer/modules/webaudio/audio_context.cc
 --- a/third_party/blink/renderer/modules/webaudio/audio_context.cc
 +++ b/third_party/blink/renderer/modules/webaudio/audio_context.cc
-@@ -261,7 +261,7 @@ void AudioContext::StopRendering() {
+@@ -312,18 +312,7 @@
  }
  
  double AudioContext::baseLatency() const {
--  return FramesPerBuffer() / static_cast<double>(sampleRate());
+-  DCHECK(IsMainThread());
+-  DCHECK(destination());
+-
+-  // TODO(hongchan): Due to the incompatible constructor between
+-  // AudioDestinationNode and DefaultAudioDestinationNode, casting directly from
+-  // |destination()| is impossible. This is a temporary workaround until the
+-  // refactoring is completed.
+-  DefaultAudioDestinationHandler& destination_handler =
+-      static_cast<DefaultAudioDestinationHandler&>(
+-          destination()->GetAudioDestinationHandler());
+-  return destination_handler.GetFramesPerBuffer() /
+-         static_cast<double>(sampleRate());
 +  return 0.04;
  }
  
- }  // namespace blink
+ void AudioContext::NotifySourceNodeStart() {
 -- 
 2.7.4
 
@@ -293,7 +304,7 @@ Subject: Battery API: return nothing
 diff --git a/services/device/battery/battery_status_service.cc b/services/device/battery/battery_status_service.cc
 --- a/services/device/battery/battery_status_service.cc
 +++ b/services/device/battery/battery_status_service.cc
-@@ -41,7 +41,7 @@ BatteryStatusService::AddCallback(const BatteryUpdateCallback& callback) {
+@@ -41,7 +41,7 @@
    if (!battery_fetcher_)
      battery_fetcher_ = BatteryStatusManager::Create(update_callback_);
  
@@ -654,3 +665,14 @@ diff --git a/third_party/blink/renderer/platform/graphics/image_data_buffer.h b/
 -- 
 2.7.4
 
+--- a/third_party/skia/src/core/SkColorData.h	2018-06-18 06:17:42.000000000 -0400
++++ b/third_party/skia/src/core/SkColorData.h.new	2018-06-22 23:24:44.710588063 -0400
+@@ -15,7 +15,7 @@
+ 
+ #include "SkColor.h"
+ #include "SkColorPriv.h"
+-#include "SkTo.h"
++#include "../../include/private/SkTo.h"
+ 
+ //////////////////////////////////////////////////////////////////////////////
+ 

@@ -1,38 +1,57 @@
 --- a/google_apis/gaia/gaia_auth_fetcher.cc	2017-10-17 15:10:41.000000000 -0400
 +++ b/google_apis/gaia/gaia_auth_fetcher.cc	2017-10-18 10:50:58.344372939 -0400
-@@ -222,35 +222,6 @@
-     int load_flags,
+@@ -251,54 +251,6 @@
      const net::NetworkTrafficAnnotationTag& traffic_annotation) {
    DCHECK(!fetch_pending_) << "Tried to fetch two things at once!";
--  fetcher_ = net::URLFetcher::Create(
--      0, gaia_gurl, body.empty() ? net::URLFetcher::GET : net::URLFetcher::POST,
--      this, traffic_annotation);
--  fetcher_->SetRequestContext(getter_);
--  fetcher_->SetUploadData("application/x-www-form-urlencoded", body);
--  gaia::MarkURLFetcherAsGaia(fetcher_.get());
+ 
+-  auto resource_request = std::make_unique<network::ResourceRequest>();
+-  resource_request->url = gaia_gurl;
+-  original_url_ = gaia_gurl;
 -
--  VLOG(2) << "Gaia fetcher URL: " << gaia_gurl.spec();
--  VLOG(2) << "Gaia fetcher headers: " << headers;
--  VLOG(2) << "Gaia fetcher body: " << body;
+-  if (!body.empty())
+-    resource_request->method = "POST";
+-
+-  if (!headers.empty())
+-    resource_request->headers.AddHeadersFromString(headers);
 -
 -  // The Gaia token exchange requests do not require any cookie-based
 -  // identification as part of requests.  We suppress sending any cookies to
 -  // maintain a separation between the user's browsing and Chrome's internal
 -  // services.  Where such mixing is desired (MergeSession or OAuthLogin), it
 -  // will be done explicitly.
--  fetcher_->SetLoadFlags(load_flags);
+-  resource_request->load_flags = load_flags;
+-
+-  // Use raw headers as the cookies are filtered-out of the response when
+-  // serialized at the IPC layer.
+-  resource_request->report_raw_headers = true;
+-
+-  url_loader_ = network::SimpleURLLoader::Create(std::move(resource_request),
+-                                                 traffic_annotation);
+-  if (!body.empty())
+-    url_loader_->AttachStringForUpload(body,
+-                                       "application/x-www-form-urlencoded");
+-
+-  url_loader_->SetAllowHttpErrorResults(true);
+-
+-  VLOG(2) << "Gaia fetcher URL: " << gaia_gurl.spec();
+-  VLOG(2) << "Gaia fetcher headers: " << headers;
+-  VLOG(2) << "Gaia fetcher body: " << body;
 -
 -  // Fetchers are sometimes cancelled because a network change was detected,
 -  // especially at startup and after sign-in on ChromeOS. Retrying once should
 -  // be enough in those cases; let the fetcher retry up to 3 times just in case.
 -  // http://crbug.com/163710
--  fetcher_->SetAutomaticallyRetryOnNetworkChanges(3);
--
--  if (!headers.empty())
--    fetcher_->SetExtraRequestHeaders(headers);
+-  url_loader_->SetRetryOptions(
+-      3, network::SimpleURLLoader::RETRY_ON_NETWORK_CHANGE);
 -
 -  fetch_pending_ = true;
--  fetcher_->Start();
+-
+-  // Unretained is OK below as |url_loader_| is owned by this.
+-  url_loader_->DownloadToString(
+-      url_loader_factory_.get(),
+-      base::BindOnce(&GaiaAuthFetcher::OnURLLoadComplete,
+-                     base::Unretained(this)),
+-      kMaxMessageSize);
  }
  
  // static
