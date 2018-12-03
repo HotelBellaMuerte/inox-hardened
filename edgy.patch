@@ -1,23 +1,14 @@
-From: csagan5 <32685696+csagan5@users.noreply.github.com>
-Date: Mon, 12 Feb 2018 21:21:36 +0100
-Subject: ungoogled-chromium: Disable webRTC log uploader
-
----
- chrome/browser/media/webrtc/webrtc_log_uploader.cc | 28 ++++------------------
- 1 file changed, 4 insertions(+), 24 deletions(-)
-
-diff --git a/chrome/browser/media/webrtc/webrtc_log_uploader.cc b/chrome/browser/media/webrtc/webrtc_log_uploader.cc
---- a/chrome/browser/media/webrtc/webrtc_log_uploader.cc
-+++ b/chrome/browser/media/webrtc/webrtc_log_uploader.cc
-@@ -115,30 +115,7 @@ void WebRtcLogUploader::LoggingStoppedDoUpload(
+--- a/chrome/browser/media/webrtc/webrtc_log_uploader.cc	2018-08-18 19:44:26.191017194 -0400
++++ b/chrome/browser/media/webrtc/webrtc_log_uploader.cc.new	2018-08-18 19:44:44.101529263 -0400
+@@ -117,30 +117,9 @@
    DCHECK(meta_data.get());
    DCHECK(!upload_done_data.log_path.empty());
  
 -  std::string compressed_log;
 -  CompressLog(&compressed_log, log_buffer.get());
--
+ 
 -  std::string local_log_id;
--
+ 
 -  if (base::PathExists(upload_done_data.log_path)) {
 -    webrtc_logging::DeleteOldWebRtcLogFiles(upload_done_data.log_path);
 -
@@ -28,7 +19,7 @@ diff --git a/chrome/browser/media/webrtc/webrtc_log_uploader.cc b/chrome/browser
 -    WriteCompressedLogToFile(compressed_log, log_file_path);
 -
 -    base::FilePath log_list_path =
--        webrtc_logging::LogList::GetWebRtcLogListFileForDirectory(
+-        webrtc_logging::TextLogList::GetWebRtcLogListFileForDirectory(
 -            upload_done_data.log_path);
 -    AddLocallyStoredLogInfoToUploadListFile(log_list_path, local_log_id);
 -  }
@@ -41,7 +32,7 @@ diff --git a/chrome/browser/media/webrtc/webrtc_log_uploader.cc b/chrome/browser
  }
  
  void WebRtcLogUploader::PrepareMultipartPostData(
-@@ -149,6 +126,9 @@ void WebRtcLogUploader::PrepareMultipartPostData(
+@@ -151,6 +130,9 @@
    DCHECK(!compressed_log.empty());
    DCHECK(meta_data.get());
  
@@ -49,8 +40,5 @@ diff --git a/chrome/browser/media/webrtc/webrtc_log_uploader.cc b/chrome/browser
 +  return;
 +
    std::unique_ptr<std::string> post_data(new std::string());
-   SetupMultipart(post_data.get(),
-                  compressed_log,
--- 
-2.7.4
-
+   SetupMultipart(post_data.get(), compressed_log,
+                  upload_done_data.incoming_rtp_dump,

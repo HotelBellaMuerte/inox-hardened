@@ -2,7 +2,7 @@
 2018-05-20 06:08:17.000000000 -0400
 +++ b/components/autofill/core/browser/autofill_download_manager.cc.new	
 2018-05-20 13:20:49.384121377 -0400
-@@ -72,7 +72,7 @@
+@@ -73,7 +73,7 @@
  };
  
  const char kDefaultAutofillServerURL[] =
@@ -11,7 +11,7 @@
  
  // Returns the base URL for the autofill server.
  GURL GetAutofillServerURL() {
-@@ -391,45 +391,6 @@
+@@ -441,45 +441,6 @@
  }
  
  bool AutofillDownloadManager::StartRequest(FormRequestData request_data) {
@@ -53,7 +53,7 @@
 -      url_loader_factory.get(),
 -      base::BindOnce(&AutofillDownloadManager::OnSimpleLoaderComplete,
 -                     base::Unretained(this), std::move(--url_loaders_.end()),
--                     std::move(request_data)));
+-                     std::move(request_data), base::TimeTicks::Now()));
    return true;
  }
  

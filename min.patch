@@ -1,0 +1,1695 @@
+--- a/components/data_reduction_proxy/core/browser/data_reduction_proxy_compression_stats.cc
++++ b/components/data_reduction_proxy/core/browser/data_reduction_proxy_compression_stats.cc
+@@ -469,6 +469,8 @@
+         weak_factory_.GetWeakPtr()));
+   }
+ 
++  InitializeWeeklyAggregateDataUse(base::Time::Now());
++
+   if (delay_.is_zero())
+     return;
+ 
+@@ -517,8 +519,6 @@
+   InitListPref(prefs::kDailyHttpReceivedContentLength);
+   InitListPref(prefs::kDailyOriginalContentLengthViaDataReductionProxy);
+   InitListPref(prefs::kDailyOriginalContentLengthWithDataReductionProxyEnabled);
+-
+-  InitializeWeeklyAggregateDataUse(base::Time::Now());
+ }
+ 
+ void DataReductionProxyCompressionStats::RecordDataUseWithMimeType(
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.cc b/chrome/browser/ui/views/tabs/tab_close_button.cc
+index 405b12a..dd0bdc9 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.cc
++++ b/chrome/browser/ui/views/tabs/tab_close_button.cc
+@@ -129,6 +129,14 @@
+   }
+ }
+ 
++gfx::Size TabCloseButton::CalculatePreferredSize() const {
++  int width = GetWidth();
++  gfx::Size size(width, width);
++  gfx::Insets insets = GetInsets();
++  size.Enlarge(insets.width(), insets.height());
++  return size;
++}
++
+ void TabCloseButton::PaintButtonContents(gfx::Canvas* canvas) {
+   canvas->SaveLayerAlpha(GetOpacity());
+   views::ImageButton::PaintButtonContents(canvas);
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.h b/chrome/browser/ui/views/tabs/tab_close_button.h
+index d94999f..029e3a5e 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.h
++++ b/chrome/browser/ui/views/tabs/tab_close_button.h
+@@ -51,6 +51,7 @@
+   void OnGestureEvent(ui::GestureEvent* event) override;
+   const char* GetClassName() const override;
+   void Layout() override;
++  gfx::Size CalculatePreferredSize() const override;
+ 
+  protected:
+   void PaintButtonContents(gfx::Canvas* canvas) override;
+diff --git a/chrome/app/vector_icons/BUILD.gn b/chrome/app/vector_icons/BUILD.gn
+index 974a79f..5520177 100644
+--- a/chrome/app/vector_icons/BUILD.gn
++++ b/chrome/app/vector_icons/BUILD.gn
+@@ -105,9 +105,7 @@
+     "tab_audio_muting_rounded.icon",
+     "tab_audio_rounded.icon",
+     "tab_bluetooth_connected.icon",
+-    "tab_close_button_highlight.icon",
+     "tab_close_button_touch.icon",
+-    "tab_close_button_touch_highlight.icon",
+     "tab_close_normal.icon",
+     "tab_media_capturing.icon",
+     "tab_media_capturing_with_arrow.icon",
+diff --git a/chrome/app/vector_icons/tab_close_button_highlight.icon b/chrome/app/vector_icons/tab_close_button_highlight.icon
+deleted file mode 100644
+index b6d4633..0000000
+--- a/chrome/app/vector_icons/tab_close_button_highlight.icon
++++ /dev/null
+@@ -1,7 +0,0 @@
+-// Copyright 2018 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-// The highlight circle around the close "X" for a tab when hovered/pressed.
+-CANVAS_DIMENSIONS, 16,
+-CIRCLE, 8, 8, 8,
+diff --git a/chrome/app/vector_icons/tab_close_button_touch_highlight.icon b/chrome/app/vector_icons/tab_close_button_touch_highlight.icon
+deleted file mode 100644
+index 6d27fa7..0000000
+--- a/chrome/app/vector_icons/tab_close_button_touch_highlight.icon
++++ /dev/null
+@@ -1,6 +0,0 @@
+-// Copyright 2018 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-CANVAS_DIMENSIONS, 24,
+-CIRCLE, 12, 12, 12,
+diff --git a/chrome/browser/themes/theme_properties.cc b/chrome/browser/themes/theme_properties.cc
+index 135c502..733d352 100644
+--- a/chrome/browser/themes/theme_properties.cc
++++ b/chrome/browser/themes/theme_properties.cc
+@@ -349,6 +349,10 @@
+       return kDefaultColorTabAlertRecordingIcon;
+     case COLOR_TAB_ALERT_CAPTURING:
+       return kDefaultColorTabAlertCapturingIcon;
++    case COLOR_TAB_CLOSE_BUTTON_BACKGROUND_HOVER:
++      return SkColorSetRGB(0xDB, 0x44, 0x37);
++    case COLOR_TAB_CLOSE_BUTTON_BACKGROUND_PRESSED:
++      return SkColorSetRGB(0xA8, 0x35, 0x2A);
+ #if defined(OS_MACOSX)
+     case COLOR_FRAME_VIBRANCY_OVERLAY:
+       return incognito ? kDefaultColorFrameVibrancyOverlayIncognito
+diff --git a/chrome/browser/ui/cocoa/hover_close_button.mm b/chrome/browser/ui/cocoa/hover_close_button.mm
+index 7f36806..a74198c 100644
+--- a/chrome/browser/ui/cocoa/hover_close_button.mm
++++ b/chrome/browser/ui/cocoa/hover_close_button.mm
+@@ -11,7 +11,10 @@
+ #import "third_party/google_toolbox_for_mac/src/AppKit/GTMKeyValueAnimation.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/resource/resource_bundle.h"
++#include "ui/gfx/canvas.h"
+ #include "ui/gfx/color_palette.h"
++#include "ui/gfx/geometry/rect_f.h"
++#include "ui/gfx/image/canvas_image_source.h"
+ #include "ui/gfx/image/image_skia_operations.h"
+ #include "ui/gfx/image/image_skia_util_mac.h"
+ #include "ui/gfx/paint_vector_icon.h"
+@@ -31,6 +34,31 @@
+ NSString* const kFadeOutValueKeyPath = @"fadeOutValue";
+ 
+ const SkColor kDefaultIconColor = SkColorSetARGB(0xA0, 0x00, 0x00, 0x00);
++
++class HighlightImage : public gfx::CanvasImageSource {
++ public:
++  explicit HighlightImage(const int image_size, SkColor color)
++      : CanvasImageSource(gfx::Size(image_size, image_size),
++                          /*is_opaque =*/true),
++        color_(color) {}
++  ~HighlightImage() override {}
++
++ private:
++  void Draw(gfx::Canvas* canvas) override {
++    cc::PaintFlags flags;
++    flags.setAntiAlias(true);
++    flags.setStyle(cc::PaintFlags::kFill_Style);
++    flags.setColor(color_);
++    canvas->DrawCircle(
++        gfx::RectF(size().width(), size().height()).CenterPoint(),
++        kTabCloseButtonSize / 2, flags);
++  }
++
++  SkColor color_;
++
++  DISALLOW_COPY_AND_ASSIGN(HighlightImage);
++};
++
+ }  // namespace
+ 
+ @interface HoverCloseButton ()
+@@ -154,7 +182,6 @@
+ }
+ 
+ - (NSImage*)imageForHoverState:(CloseButtonHoverState)hoverState {
+-  const gfx::VectorIcon* vectorHighlightIcon = nullptr;
+   SkColor vectorIconColor = gfx::kPlaceholderColor;
+ 
+   switch (hoverState) {
+@@ -162,23 +189,22 @@
+       break;
+     case kHoverStateMouseOver:
+       // For mouse over, the icon color is the fill color of the circle.
+-      vectorHighlightIcon = &kTabCloseButtonHighlightIcon;
+       vectorIconColor = SkColorSetARGB(0xFF, 0xDB, 0x44, 0x37);
+       break;
+     case kHoverStateMouseDown:
+       // For mouse pressed, the icon color is the fill color of the circle.
+-      vectorHighlightIcon = &kTabCloseButtonHighlightIcon;
+       vectorIconColor = SkColorSetARGB(0xFF, 0xA8, 0x35, 0x2A);
+       break;
+   }
+ 
+-  const gfx::ImageSkia& iconImage =
+-      gfx::CreateVectorIcon(kTabCloseNormalIcon, kTabCloseButtonSize,
+-                            vectorHighlightIcon ? SK_ColorWHITE : iconColor_);
++  const gfx::ImageSkia iconImage = gfx::CreateVectorIcon(
++      kTabCloseNormalIcon, kTabCloseButtonSize,
++      hoverState != kHoverStateNone ? SK_ColorWHITE : iconColor_);
+ 
+-  if (vectorHighlightIcon) {
+-    const gfx::ImageSkia& highlight = gfx::CreateVectorIcon(
+-        *vectorHighlightIcon, kTabCloseButtonSize, vectorIconColor);
++  if (hoverState != kHoverStateNone) {
++    const gfx::ImageSkia highlight =
++        gfx::CanvasImageSource::MakeImageSkia<HighlightImage>(
++            kTabCloseButtonSize, vectorIconColor);
+     return NSImageFromImageSkia(
+         gfx::ImageSkiaOperations::CreateSuperimposedImage(highlight,
+                                                           iconImage));
+diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
+index 8bd5691..c4c7f2f 100644
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1703,14 +1703,11 @@
+     button_color_ = new_button_color;
+     title_->SetEnabledColor(title_color);
+     alert_indicator_button_->OnParentTabButtonColorChanged();
+-    if (!MD::IsTouchOptimizedUiEnabled()) {
+-      close_button_->SetTabColor(button_color_,
+-                                 color_utils::IsDark(theme_provider->GetColor(
+-                                     ThemeProperties::COLOR_TOOLBAR)));
+-    }
+   }
+-  if (MD::IsTouchOptimizedUiEnabled())
+-    close_button_->ActiveStateChanged(this);
++  SkColor icon_color = MD::IsNewerMaterialUi()
++                           ? GetCloseTabButtonColor(views::Button::STATE_NORMAL)
++                           : button_color_;
++  close_button_->SetIconColors(icon_color);
+ }
+ 
+ Tab::BackgroundCache::BackgroundCache() = default;
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.cc b/chrome/browser/ui/views/tabs/tab_close_button.cc
+index dd0bdc9..3193631 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.cc
++++ b/chrome/browser/ui/views/tabs/tab_close_button.cc
+@@ -58,26 +58,8 @@
+   return gfx::GetDefaultSizeOfVectorIcon(close_icon);
+ }
+ 
+-void TabCloseButton::SetTabColor(SkColor color, bool tab_color_is_dark) {
+-  SkColor hover_color = SkColorSetRGB(0xDB, 0x44, 0x37);
+-  SkColor pressed_color = SkColorSetRGB(0xA8, 0x35, 0x2A);
+-  SkColor icon_color = SK_ColorWHITE;
+-  if (MD::IsRefreshUi()) {
+-    hover_color = tab_color_is_dark ? gfx::kGoogleGrey700 : gfx::kGoogleGrey200;
+-    pressed_color =
+-        tab_color_is_dark ? gfx::kGoogleGrey600 : gfx::kGoogleGrey300;
+-    icon_color = color;
+-  }
+-  GenerateImages(false, color, icon_color, hover_color, pressed_color);
+-}
+-
+-void TabCloseButton::ActiveStateChanged(const Tab* parent_tab) {
+-  SkColor icon_color =
+-      parent_tab->GetCloseTabButtonColor(views::Button::STATE_NORMAL);
+-  GenerateImages(
+-      true, icon_color, icon_color,
+-      parent_tab->GetCloseTabButtonColor(views::Button::STATE_HOVERED),
+-      parent_tab->GetCloseTabButtonColor(views::Button::STATE_PRESSED));
++void TabCloseButton::SetIconColors(SkColor color) {
++  GenerateImages(color, MD::IsNewerMaterialUi() ? color : SK_ColorWHITE);
+ }
+ 
+ views::View* TabCloseButton::GetTooltipHandlerForPoint(
+@@ -139,6 +121,20 @@
+ 
+ void TabCloseButton::PaintButtonContents(gfx::Canvas* canvas) {
+   canvas->SaveLayerAlpha(GetOpacity());
++  ButtonState button_state = state();
++  if (button_state != views::Button::STATE_NORMAL) {
++    // Draw the background circle highlight.
++    gfx::Path path;
++    SkColor background_color =
++        static_cast<Tab*>(parent())->GetCloseTabButtonColor(button_state);
++    gfx::Point center = GetContentsBounds().CenterPoint();
++    path.setFillType(SkPath::kEvenOdd_FillType);
++    path.addCircle(center.x(), center.y(), GetWidth() / 2);
++    cc::PaintFlags flags;
++    flags.setAntiAlias(true);
++    flags.setColor(background_color);
++    canvas->DrawPath(path, flags);
++  }
+   views::ImageButton::PaintButtonContents(canvas);
+   canvas->Restore();
+ }
+@@ -186,34 +182,18 @@
+                                      SK_AlphaOPAQUE);
+ }
+ 
+-void TabCloseButton::GenerateImages(bool is_touch,
+-                                    SkColor normal_icon_color,
+-                                    SkColor hover_pressed_icon_color,
+-                                    SkColor hover_highlight_color,
+-                                    SkColor pressed_highlight_color) {
+-  const gfx::VectorIcon& button_icon =
+-      is_touch ? kTabCloseButtonTouchIcon : kTabCloseNormalIcon;
+-  const gfx::VectorIcon& highlight = is_touch
+-                                         ? kTabCloseButtonTouchHighlightIcon
+-                                         : kTabCloseButtonHighlightIcon;
+-  const gfx::ImageSkia& normal =
++void TabCloseButton::GenerateImages(SkColor normal_icon_color,
++                                    SkColor hover_pressed_icon_color) {
++  const gfx::VectorIcon& button_icon = MD::IsTouchOptimizedUiEnabled()
++                                           ? kTabCloseButtonTouchIcon
++                                           : kTabCloseNormalIcon;
++  const gfx::ImageSkia normal =
+       gfx::CreateVectorIcon(button_icon, normal_icon_color);
+-  const gfx::ImageSkia& hover_pressed =
++  const gfx::ImageSkia hover_pressed =
+       normal_icon_color != hover_pressed_icon_color
+           ? gfx::CreateVectorIcon(button_icon, hover_pressed_icon_color)
+           : normal;
+-
+-  const gfx::ImageSkia& hover_highlight =
+-      gfx::CreateVectorIcon(highlight, hover_highlight_color);
+-  const gfx::ImageSkia& pressed_highlight =
+-      gfx::CreateVectorIcon(highlight, pressed_highlight_color);
+-  const gfx::ImageSkia& hover =
+-      gfx::ImageSkiaOperations::CreateSuperimposedImage(hover_highlight,
+-                                                        hover_pressed);
+-  const gfx::ImageSkia& pressed =
+-      gfx::ImageSkiaOperations::CreateSuperimposedImage(pressed_highlight,
+-                                                        hover_pressed);
+   SetImage(views::Button::STATE_NORMAL, normal);
+-  SetImage(views::Button::STATE_HOVERED, hover);
+-  SetImage(views::Button::STATE_PRESSED, pressed);
++  SetImage(views::Button::STATE_HOVERED, hover_pressed);
++  SetImage(views::Button::STATE_PRESSED, hover_pressed);
+ }
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.h b/chrome/browser/ui/views/tabs/tab_close_button.h
+index 029e3a5e..e38bc6a 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.h
++++ b/chrome/browser/ui/views/tabs/tab_close_button.h
+@@ -9,8 +9,6 @@
+ #include "ui/views/controls/button/image_button.h"
+ #include "ui/views/masked_targeter_delegate.h"
+ 
+-class Tab;
+-
+ // This is a Button subclass that shows the tab closed icon.
+ //
+ // In addition to setup for the icon, it forwards middle clicks to the parent
+@@ -35,13 +33,8 @@
+   // This function must be called before the tab is painted so it knows what
+   // color to use. It must also be called when the background color of the tab
+   // changes (this class does not track tab activation state), and when the
+-  // theme changes. |tab_color_is_dark| will be true if the tab is a dark
+-  // color. This will NOT be called when in newer material ui mode.
+-  void SetTabColor(SkColor color, bool tab_color_is_dark);
+-
+-  // This is called whenever the |parent_tab| changes its active state. This
+-  // is only called when in newer material ui mode.
+-  void ActiveStateChanged(const Tab* parent_tab);
++  // theme changes.
++  void SetIconColors(SkColor color);
+ 
+   // views::View:
+   View* GetTooltipHandlerForPoint(const gfx::Point& point) override;
+@@ -65,11 +58,8 @@
+   // the hover animation on the parent tab.
+   SkAlpha GetOpacity();
+ 
+-  void GenerateImages(bool is_touch,
+-                      SkColor normal_icon_color,
+-                      SkColor hover_pressed_icon_color,
+-                      SkColor hover_highlight_color,
+-                      SkColor pressed_highlight_color);
++  void GenerateImages(SkColor normal_icon_color,
++                      SkColor hover_pressed_icon_color);
+ 
+   MouseEventCallback mouse_event_callback_;
+ 
+diff --git a/chrome/browser/ui/views/frame/browser_non_client_frame_view.cc b/chrome/browser/ui/views/frame/browser_non_client_frame_view.cc
+index 8d5d3ab..9c3ad1c 100644
+--- a/chrome/browser/ui/views/frame/browser_non_client_frame_view.cc
++++ b/chrome/browser/ui/views/frame/browser_non_client_frame_view.cc
+@@ -128,19 +128,6 @@
+              : paint_color;
+ }
+ 
+-SkColor BrowserNonClientFrameView::GetTabSeparatorColor() const {
+-  DCHECK(MD::IsRefreshUi());
+-  // TODO(pkasting): https://crbug.com/866689  Replace this with "blend
+-  // background tab text color toward background tab background color at 46% or
+-  // 1.84 contrast ratio, whichever is larger" (and make sure the blend is large
+-  // enough in the default theme to not need adjusting).
+-  constexpr SkAlpha kTabSeparatorAlpha = 0x4D;  // 30%
+-  const SkColor tab_color = GetTabBackgroundColor(TAB_INACTIVE, true);
+-  const SkColor base_color =
+-      color_utils::BlendTowardOppositeLuma(tab_color, SK_AlphaOPAQUE);
+-  return color_utils::AlphaBlend(base_color, tab_color, kTabSeparatorAlpha);
+-}
+-
+ SkColor BrowserNonClientFrameView::GetTabBackgroundColor(TabState state,
+                                                          bool opaque) const {
+   if (state == TAB_ACTIVE)
+diff --git a/chrome/browser/ui/views/frame/browser_non_client_frame_view.h b/chrome/browser/ui/views/frame/browser_non_client_frame_view.h
+index 93fdea7..a2f5ff76 100644
+--- a/chrome/browser/ui/views/frame/browser_non_client_frame_view.h
++++ b/chrome/browser/ui/views/frame/browser_non_client_frame_view.h
+@@ -89,9 +89,6 @@
+   // state of the window.
+   SkColor GetToolbarTopSeparatorColor() const;
+ 
+-  // Under Refresh, returns the color of the separator between the tabs.
+-  SkColor GetTabSeparatorColor() const;
+-
+   // Returns the tab background color based on both the |state| of the tab and
+   // the activation state of the window.  If |opaque| is true, the resulting
+   // color after drawing the tab background on the frame will be returned.
+diff --git a/chrome/browser/ui/views/tabs/browser_tab_strip_controller.cc b/chrome/browser/ui/views/tabs/browser_tab_strip_controller.cc
+index 7b2989d..3fd3314 100644
+--- a/chrome/browser/ui/views/tabs/browser_tab_strip_controller.cc
++++ b/chrome/browser/ui/views/tabs/browser_tab_strip_controller.cc
+@@ -394,10 +394,6 @@
+   return GetFrameView()->GetToolbarTopSeparatorColor();
+ }
+ 
+-SkColor BrowserTabStripController::GetTabSeparatorColor() const {
+-  return GetFrameView()->GetTabSeparatorColor();
+-}
+-
+ SkColor BrowserTabStripController::GetTabBackgroundColor(TabState state,
+                                                          bool opaque) const {
+   return GetFrameView()->GetTabBackgroundColor(state, opaque);
+diff --git a/chrome/browser/ui/views/tabs/browser_tab_strip_controller.h b/chrome/browser/ui/views/tabs/browser_tab_strip_controller.h
+index f1c1530..44c2d4b 100644
+--- a/chrome/browser/ui/views/tabs/browser_tab_strip_controller.h
++++ b/chrome/browser/ui/views/tabs/browser_tab_strip_controller.h
+@@ -78,7 +78,6 @@
+   void OnStoppedDraggingTabs() override;
+   SkColor GetFrameColor() const override;
+   SkColor GetToolbarTopSeparatorColor() const override;
+-  SkColor GetTabSeparatorColor() const override;
+   SkColor GetTabBackgroundColor(TabState active, bool opaque) const override;
+   SkColor GetTabForegroundColor(TabState state) const override;
+   int GetTabBackgroundResourceId(bool* has_custom_image) const override;
+diff --git a/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.cc b/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.cc
+index 8cb7a4c..2fdf084 100644
+--- a/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.cc
++++ b/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.cc
+@@ -158,10 +158,6 @@
+   return gfx::kPlaceholderColor;
+ }
+ 
+-SkColor FakeBaseTabStripController::GetTabSeparatorColor() const {
+-  return gfx::kPlaceholderColor;
+-}
+-
+ SkColor FakeBaseTabStripController::GetTabBackgroundColor(TabState state,
+                                                           bool opaque) const {
+   return gfx::kPlaceholderColor;
+diff --git a/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.h b/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.h
+index 4574c91..f283e1f 100644
+--- a/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.h
++++ b/chrome/browser/ui/views/tabs/fake_base_tab_strip_controller.h
+@@ -54,7 +54,6 @@
+   void OnStoppedDraggingTabs() override;
+   SkColor GetFrameColor() const override;
+   SkColor GetToolbarTopSeparatorColor() const override;
+-  SkColor GetTabSeparatorColor() const override;
+   SkColor GetTabBackgroundColor(TabState state, bool opaque) const override;
+   SkColor GetTabForegroundColor(TabState state) const override;
+   int GetTabBackgroundResourceId(bool* has_custom_image) const override;
+diff --git a/chrome/browser/ui/views/tabs/tab_strip.cc b/chrome/browser/ui/views/tabs/tab_strip.cc
+index aebc66d..b80010c 100644
+--- a/chrome/browser/ui/views/tabs/tab_strip.cc
++++ b/chrome/browser/ui/views/tabs/tab_strip.cc
+@@ -319,7 +319,7 @@
+   for (int i = 0; i < tab_count(); ++i)
+     tab_at(i)->FrameColorsChanged();
+   new_tab_button_->FrameColorsChanged();
+-  UpdateOpacities();
++  UpdateContrastRatioValues();
+   SchedulePaint();
+ }
+ 
+@@ -1154,7 +1154,7 @@
+ }
+ 
+ SkColor TabStrip::GetTabSeparatorColor() const {
+-  return controller_->GetTabSeparatorColor();
++  return separator_color_;
+ }
+ 
+ SkColor TabStrip::GetTabBackgroundColor(TabState state, bool opaque) const {
+@@ -1435,6 +1435,8 @@
+   // available.
+   if (MD::IsRefreshUi())
+     SingleTabModeChanged();
++  else
++    FrameColorsChanged();
+ }
+ 
+ BrowserRootView::DropIndex TabStrip::GetDropIndex(
+@@ -1502,7 +1504,7 @@
+     drop_indicator_height = drop_image->height();
+   }
+ 
+-  UpdateOpacities();
++  UpdateContrastRatioValues();
+ }
+ 
+ void TabStrip::StartInsertTabAnimation(int model_index) {
+@@ -2056,47 +2058,56 @@
+   }
+ }
+ 
+-void TabStrip::UpdateOpacities() {
+-  // There may be no controller in unit tests, and call to GetTabBackgroundColor
+-  // below requires one, so bail early if it is absent.
++void TabStrip::UpdateContrastRatioValues() {
++  // There may be no controller in unit tests, and the call to
++  // GetTabBackgroundColor() below requires one, so bail early if it is absent.
+   if (!controller_)
+     return;
+ 
+-  // The contrast ratio for the hover effect on standard-width tabs.
+-  // In the default Refresh color scheme, this corresponds to a hover
+-  // opacity of 0.4.
+-  constexpr float kDesiredContrastHoveredStandardWidthTab = 1.11f;
+-
+-  // The contrast ratio for the hover effect on min-width tabs.
+-  // In the default Refresh color scheme, this corresponds to a hover
+-  // opacity of 0.65.
+-  constexpr float kDesiredContrastHoveredMinWidthTab = 1.19f;
+-
+-  // The contrast ratio for the radial gradient effect on hovered tabs.
+-  // In the default Refresh color scheme, this corresponds to a hover
+-  // opacity of 0.45.
+-  constexpr float kDesiredContrastRadialGradient = 1.13728f;
+-
+   const SkColor active_tab_bg_color = GetTabBackgroundColor(TAB_ACTIVE, true);
+   const SkColor inactive_tab_bg_color =
+       GetTabBackgroundColor(TAB_INACTIVE, true);
+ 
++  // The contrast ratio for the hover effect on standard-width tabs.
++  // In the default Refresh color scheme, this corresponds to a hover
++  // opacity of 0.4.
++  constexpr float kDesiredContrastHoveredStandardWidthTab = 1.11f;
+   const SkAlpha hover_base_alpha_wide =
+       color_utils::GetBlendValueWithMinimumContrast(
+           inactive_tab_bg_color, active_tab_bg_color, inactive_tab_bg_color,
+           kDesiredContrastHoveredStandardWidthTab);
++  hover_opacity_min_ = hover_base_alpha_wide / 255.0f;
++
++  // The contrast ratio for the hover effect on min-width tabs.
++  // In the default Refresh color scheme, this corresponds to a hover
++  // opacity of 0.65.
++  constexpr float kDesiredContrastHoveredMinWidthTab = 1.19f;
+   const SkAlpha hover_base_alpha_narrow =
+       color_utils::GetBlendValueWithMinimumContrast(
+           inactive_tab_bg_color, active_tab_bg_color, inactive_tab_bg_color,
+           kDesiredContrastHoveredMinWidthTab);
++  hover_opacity_max_ = hover_base_alpha_narrow / 255.0f;
++
++  // The contrast ratio for the radial gradient effect on hovered tabs.
++  // In the default Refresh color scheme, this corresponds to a hover
++  // opacity of 0.45.
++  constexpr float kDesiredContrastRadialGradient = 1.13728f;
+   const SkAlpha radial_highlight_alpha =
+       color_utils::GetBlendValueWithMinimumContrast(
+           inactive_tab_bg_color, active_tab_bg_color, inactive_tab_bg_color,
+           kDesiredContrastRadialGradient);
+-
+-  hover_opacity_min_ = hover_base_alpha_wide / 255.0f;
+-  hover_opacity_max_ = hover_base_alpha_narrow / 255.0f;
+   radial_highlight_opacity_ = radial_highlight_alpha / 255.0f;
++
++  // The contrast ratio for the separator between inactive tabs.
++  // In the default Refresh color scheme, this corresponds to a tab text opacity
++  // of 0.46.
++  const SkColor text_color = GetTabForegroundColor(TAB_INACTIVE);
++  constexpr float kTabSeparatorRatio = 1.84f;
++  const SkAlpha separator_alpha = color_utils::GetBlendValueWithMinimumContrast(
++      inactive_tab_bg_color, text_color, inactive_tab_bg_color,
++      kTabSeparatorRatio);
++  separator_color_ = color_utils::AlphaBlend(text_color, inactive_tab_bg_color,
++                                             separator_alpha);
+ }
+ 
+ void TabStrip::ResizeLayoutTabs() {
+diff --git a/chrome/browser/ui/views/tabs/tab_strip.h b/chrome/browser/ui/views/tabs/tab_strip.h
+index 2bb93fcc..7e132cc 100644
+--- a/chrome/browser/ui/views/tabs/tab_strip.h
++++ b/chrome/browser/ui/views/tabs/tab_strip.h
+@@ -20,6 +20,7 @@
+ #include "chrome/browser/ui/views/tabs/tab_controller.h"
+ #include "chrome/browser/ui/views/tabs/tab_strip.h"
+ #include "ui/gfx/animation/animation_container.h"
++#include "ui/gfx/color_palette.h"
+ #include "ui/gfx/geometry/point.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/views/animation/bounds_animator.h"
+@@ -459,8 +460,8 @@
+   void UpdateStackedLayoutFromMouseEvent(views::View* source,
+                                          const ui::MouseEvent& event);
+ 
+-  // Computes and stores tab hover opacities derived from contrast ratios.
+-  void UpdateOpacities();
++  // Computes and stores values derived from contrast ratios.
++  void UpdateContrastRatioValues();
+ 
+   // -- Tab Resize Layout -----------------------------------------------------
+ 
+@@ -693,6 +694,8 @@
+   float hover_opacity_max_ = 1.0f;
+   float radial_highlight_opacity_ = 1.0f;
+ 
++  SkColor separator_color_ = gfx::kPlaceholderColor;
++
+   DISALLOW_COPY_AND_ASSIGN(TabStrip);
+ };
+ 
+diff --git a/chrome/browser/ui/views/tabs/tab_strip_controller.h b/chrome/browser/ui/views/tabs/tab_strip_controller.h
+index 5619634..87aa0186 100644
+--- a/chrome/browser/ui/views/tabs/tab_strip_controller.h
++++ b/chrome/browser/ui/views/tabs/tab_strip_controller.h
+@@ -127,9 +127,6 @@
+   // state of the window.
+   virtual SkColor GetToolbarTopSeparatorColor() const = 0;
+ 
+-  // Under Refresh, returns the color of the separator between the tabs.
+-  virtual SkColor GetTabSeparatorColor() const = 0;
+-
+   // Returns the tab background color based on both the |state| of the tab and
+   // the activation state of the window.  If |opaque| is true, the resulting
+   // color after drawing the tab background on the frame will be returned.
+diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
+index c4c7f2f..e5340b74 100644
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1704,9 +1704,10 @@
+     title_->SetEnabledColor(title_color);
+     alert_indicator_button_->OnParentTabButtonColorChanged();
+   }
+-  SkColor icon_color = MD::IsNewerMaterialUi()
+-                           ? GetCloseTabButtonColor(views::Button::STATE_NORMAL)
+-                           : button_color_;
++  SkColor icon_color =
++      MD::GetMode() == ui::MaterialDesignController::MATERIAL_TOUCH_OPTIMIZED
++          ? GetCloseTabButtonColor(views::Button::STATE_NORMAL)
++          : button_color_;
+   close_button_->SetIconColors(icon_color);
+ }
+ 
+diff --git a/chrome/app/vector_icons/BUILD.gn b/chrome/app/vector_icons/BUILD.gn
+index 5520177..adc13b33 100644
+--- a/chrome/app/vector_icons/BUILD.gn
++++ b/chrome/app/vector_icons/BUILD.gn
+@@ -105,7 +105,6 @@
+     "tab_audio_muting_rounded.icon",
+     "tab_audio_rounded.icon",
+     "tab_bluetooth_connected.icon",
+-    "tab_close_button_touch.icon",
+     "tab_close_normal.icon",
+     "tab_media_capturing.icon",
+     "tab_media_capturing_with_arrow.icon",
+diff --git a/chrome/app/vector_icons/tab_close_button_touch.icon b/chrome/app/vector_icons/tab_close_button_touch.icon
+deleted file mode 100644
+index 42461c0..0000000
+--- a/chrome/app/vector_icons/tab_close_button_touch.icon
++++ /dev/null
+@@ -1,18 +0,0 @@
+-// Copyright 2018 The Chromium Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-CANVAS_DIMENSIONS, 24,
+-MOVE_TO, 16.83f, 8.35f,
+-LINE_TO, 15.65f, 7.17f,
+-LINE_TO, 12, 10.82f,
+-LINE_TO, 8.35f, 7.17f,
+-LINE_TO, 7.17f, 8.35f,
+-LINE_TO, 10.82f, 12,
+-LINE_TO, 7.17f, 15.65f,
+-LINE_TO, 8.35f, 16.83f,
+-LINE_TO, 12, 13.18f,
+-LINE_TO, 15.65f, 16.83f,
+-LINE_TO, 16.83f, 15.65f,
+-LINE_TO, 13.18f, 12,
+-CLOSE
+diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
+index e5340b74..7400bd6 100644
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1704,11 +1704,58 @@
+     title_->SetEnabledColor(title_color);
+     alert_indicator_button_->OnParentTabButtonColorChanged();
+   }
+-  SkColor icon_color =
++  UpdateCloseButtonColors(title_color);
++}
++
++void Tab::UpdateCloseButtonColors(SkColor title_color) {
++  // These ratios are calculated from the default colors specified in the
++  // Material Refresh design document. Active/inactive are the contrast ratios
++  // of the close X against the tab background. Hovered/pressed are the contrast
++  // ratios of the highlight circle against the tab background.
++  constexpr float kMinimumActiveContrastRatio = 6.05f;
++  constexpr float kMinimumInactiveContrastRatio = 4.61f;
++  constexpr float kMinimumHoveredContrastRatio = 5.02f;
++  constexpr float kMinimumPressedContrastRatio = 4.41f;
++
++  const SkColor tab_bg_color = controller_->GetTabBackgroundColor(
++      IsActive() ? TAB_ACTIVE : TAB_INACTIVE);
++  const SkColor base_icon_color =
+       MD::GetMode() == ui::MaterialDesignController::MATERIAL_TOUCH_OPTIMIZED
+           ? GetCloseTabButtonColor(views::Button::STATE_NORMAL)
+-          : button_color_;
+-  close_button_->SetIconColors(icon_color);
++          : title_color;
++  const SkColor base_hovered_pressed_icon_color =
++      MD::IsNewerMaterialUi() ? base_icon_color : SK_ColorWHITE;
++  const SkColor base_hovered_color =
++      GetCloseTabButtonColor(views::Button::STATE_HOVERED);
++  const SkColor base_pressed_color =
++      GetCloseTabButtonColor(views::Button::STATE_PRESSED);
++
++  const auto get_color_for_contrast_ratio = [](SkColor fg_color,
++                                               SkColor bg_color,
++                                               float contrast_ratio) {
++    const SkAlpha blend_alpha = color_utils::GetBlendValueWithMinimumContrast(
++        bg_color, fg_color, bg_color, contrast_ratio);
++    return color_utils::AlphaBlend(fg_color, bg_color, blend_alpha);
++  };
++
++  const SkColor generated_icon_color = get_color_for_contrast_ratio(
++      base_icon_color, tab_bg_color,
++      IsActive() ? kMinimumActiveContrastRatio : kMinimumInactiveContrastRatio);
++  const SkColor generated_hovered_color = get_color_for_contrast_ratio(
++      base_hovered_color, tab_bg_color, kMinimumHoveredContrastRatio);
++  const SkColor generated_pressed_color = get_color_for_contrast_ratio(
++      base_pressed_color, tab_bg_color, kMinimumPressedContrastRatio);
++
++  const SkColor generated_hovered_icon_color =
++      color_utils::GetColorWithMinimumContrast(base_hovered_pressed_icon_color,
++                                               generated_hovered_color);
++  const SkColor generated_pressed_icon_color =
++      color_utils::GetColorWithMinimumContrast(base_hovered_pressed_icon_color,
++                                               generated_pressed_color);
++  close_button_->SetIconColors(
++      generated_icon_color, generated_hovered_icon_color,
++      generated_pressed_icon_color, generated_hovered_color,
++      generated_pressed_color);
+ }
+ 
+ Tab::BackgroundCache::BackgroundCache() = default;
+diff --git a/chrome/browser/ui/views/tabs/tab.h b/chrome/browser/ui/views/tabs/tab.h
+index dbce144..f6aa311 100644
+--- a/chrome/browser/ui/views/tabs/tab.h
++++ b/chrome/browser/ui/views/tabs/tab.h
+@@ -306,6 +306,9 @@
+   // time the theme or active state may have changed.
+   void OnButtonColorMaybeChanged();
+ 
++  // Generate and update close button colors for proper contrast.
++  void UpdateCloseButtonColors(SkColor title_color);
++
+   // The controller, never NULL.
+   TabController* const controller_;
+ 
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.cc b/chrome/browser/ui/views/tabs/tab_close_button.cc
+index 3193631..6f6c428 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.cc
++++ b/chrome/browser/ui/views/tabs/tab_close_button.cc
+@@ -21,7 +21,7 @@
+ #include "ui/base/material_design/material_design_controller.h"
+ #include "ui/gfx/animation/tween.h"
+ #include "ui/gfx/canvas.h"
+-#include "ui/gfx/color_palette.h"
++#include "ui/gfx/color_utils.h"
+ #include "ui/gfx/image/image_skia_operations.h"
+ #include "ui/gfx/paint_vector_icon.h"
+ #include "ui/views/rect_based_targeting_utils.h"
+@@ -33,6 +33,11 @@
+ 
+ using MD = ui::MaterialDesignController;
+ 
++namespace {
++constexpr int kGlyphWidth = 16;
++constexpr int kTouchGlyphWidth = 24;
++}  //  namespace
++
+ TabCloseButton::TabCloseButton(views::ButtonListener* listener,
+                                MouseEventCallback mouse_event_callback)
+     : views::ImageButton(listener),
+@@ -52,14 +57,19 @@
+ 
+ // static
+ int TabCloseButton::GetWidth() {
+-  const gfx::VectorIcon& close_icon = MD::IsTouchOptimizedUiEnabled()
+-                                          ? kTabCloseButtonTouchIcon
+-                                          : kTabCloseNormalIcon;
+-  return gfx::GetDefaultSizeOfVectorIcon(close_icon);
++  return MD::IsTouchOptimizedUiEnabled() ? kTouchGlyphWidth : kGlyphWidth;
+ }
+ 
+-void TabCloseButton::SetIconColors(SkColor color) {
+-  GenerateImages(color, MD::IsNewerMaterialUi() ? color : SK_ColorWHITE);
++void TabCloseButton::SetIconColors(SkColor icon_color,
++                                   SkColor hovered_icon_color,
++                                   SkColor pressed_icon_color,
++                                   SkColor hovered_color,
++                                   SkColor pressed_color) {
++  icon_colors_[views::Button::STATE_NORMAL] = icon_color;
++  icon_colors_[views::Button::STATE_HOVERED] = hovered_icon_color;
++  icon_colors_[views::Button::STATE_PRESSED] = pressed_icon_color;
++  highlight_colors_[views::Button::STATE_HOVERED] = hovered_color;
++  highlight_colors_[views::Button::STATE_PRESSED] = pressed_color;
+ }
+ 
+ views::View* TabCloseButton::GetTooltipHandlerForPoint(
+@@ -122,20 +132,10 @@
+ void TabCloseButton::PaintButtonContents(gfx::Canvas* canvas) {
+   canvas->SaveLayerAlpha(GetOpacity());
+   ButtonState button_state = state();
+-  if (button_state != views::Button::STATE_NORMAL) {
+-    // Draw the background circle highlight.
+-    gfx::Path path;
+-    SkColor background_color =
+-        static_cast<Tab*>(parent())->GetCloseTabButtonColor(button_state);
+-    gfx::Point center = GetContentsBounds().CenterPoint();
+-    path.setFillType(SkPath::kEvenOdd_FillType);
+-    path.addCircle(center.x(), center.y(), GetWidth() / 2);
+-    cc::PaintFlags flags;
+-    flags.setAntiAlias(true);
+-    flags.setColor(background_color);
+-    canvas->DrawPath(path, flags);
+-  }
+-  views::ImageButton::PaintButtonContents(canvas);
++  // Draw the background circle highlight.
++  if (button_state != views::Button::STATE_NORMAL)
++    DrawHighlight(canvas, button_state);
++  DrawCloseGlyph(canvas, button_state);
+   canvas->Restore();
+ }
+ 
+@@ -172,6 +172,32 @@
+   return true;
+ }
+ 
++void TabCloseButton::DrawHighlight(gfx::Canvas* canvas, ButtonState state) {
++  gfx::Path path;
++  gfx::Point center = GetContentsBounds().CenterPoint();
++  path.setFillType(SkPath::kEvenOdd_FillType);
++  path.addCircle(center.x(), center.y(), GetWidth() / 2);
++  cc::PaintFlags flags;
++  flags.setAntiAlias(true);
++  flags.setColor(highlight_colors_[state]);
++  canvas->DrawPath(path, flags);
++}
++
++void TabCloseButton::DrawCloseGlyph(gfx::Canvas* canvas, ButtonState state) {
++  cc::PaintFlags flags;
++  constexpr float kStrokeWidth = 1.5f;
++  float touch_scale = float{GetWidth()} / kGlyphWidth;
++  float size = (kGlyphWidth - 8) * touch_scale - kStrokeWidth;
++  gfx::RectF glyph_bounds(GetContentsBounds());
++  glyph_bounds.ClampToCenteredSize(gfx::SizeF(size, size));
++  flags.setAntiAlias(true);
++  flags.setStrokeWidth(kStrokeWidth);
++  flags.setStrokeCap(cc::PaintFlags::kRound_Cap);
++  flags.setColor(icon_colors_[state]);
++  canvas->DrawLine(glyph_bounds.origin(), glyph_bounds.bottom_right(), flags);
++  canvas->DrawLine(glyph_bounds.bottom_left(), glyph_bounds.top_right(), flags);
++}
++
+ SkAlpha TabCloseButton::GetOpacity() {
+   Tab* tab = static_cast<Tab*>(parent());
+   if (base::FeatureList::IsEnabled(features::kCloseButtonsInactiveTabs) ||
+@@ -181,19 +207,3 @@
+   return gfx::Tween::IntValueBetween(animation_value, SK_AlphaTRANSPARENT,
+                                      SK_AlphaOPAQUE);
+ }
+-
+-void TabCloseButton::GenerateImages(SkColor normal_icon_color,
+-                                    SkColor hover_pressed_icon_color) {
+-  const gfx::VectorIcon& button_icon = MD::IsTouchOptimizedUiEnabled()
+-                                           ? kTabCloseButtonTouchIcon
+-                                           : kTabCloseNormalIcon;
+-  const gfx::ImageSkia normal =
+-      gfx::CreateVectorIcon(button_icon, normal_icon_color);
+-  const gfx::ImageSkia hover_pressed =
+-      normal_icon_color != hover_pressed_icon_color
+-          ? gfx::CreateVectorIcon(button_icon, hover_pressed_icon_color)
+-          : normal;
+-  SetImage(views::Button::STATE_NORMAL, normal);
+-  SetImage(views::Button::STATE_HOVERED, hover_pressed);
+-  SetImage(views::Button::STATE_PRESSED, hover_pressed);
+-}
+diff --git a/chrome/browser/ui/views/tabs/tab_close_button.h b/chrome/browser/ui/views/tabs/tab_close_button.h
+index e38bc6a..6a0ff20 100644
+--- a/chrome/browser/ui/views/tabs/tab_close_button.h
++++ b/chrome/browser/ui/views/tabs/tab_close_button.h
+@@ -6,6 +6,7 @@
+ #define CHROME_BROWSER_UI_VIEWS_TABS_TAB_CLOSE_BUTTON_H_
+ 
+ #include "base/callback_forward.h"
++#include "ui/gfx/color_palette.h"
+ #include "ui/views/controls/button/image_button.h"
+ #include "ui/views/masked_targeter_delegate.h"
+ 
+@@ -31,10 +32,14 @@
+   static int GetWidth();
+ 
+   // This function must be called before the tab is painted so it knows what
+-  // color to use. It must also be called when the background color of the tab
++  // colors to use. It must also be called when the background color of the tab
+   // changes (this class does not track tab activation state), and when the
+   // theme changes.
+-  void SetIconColors(SkColor color);
++  void SetIconColors(SkColor icon_color,
++                     SkColor hovered_icon_color,
++                     SkColor pressed_icon_color,
++                     SkColor hovered_color,
++                     SkColor pressed_color);
+ 
+   // views::View:
+   View* GetTooltipHandlerForPoint(const gfx::Point& point) override;
+@@ -54,15 +59,21 @@
+   views::View* TargetForRect(views::View* root, const gfx::Rect& rect) override;
+   bool GetHitTestMask(gfx::Path* mask) const override;
+ 
++  // Draw the highlight circle.
++  void DrawHighlight(gfx::Canvas* canvas, ButtonState state);
++
++  // Draw the close "X" glyph.
++  void DrawCloseGlyph(gfx::Canvas* canvas, ButtonState state);
++
+   // In material refresh mode, calculates opacity based on the current state of
+   // the hover animation on the parent tab.
+   SkAlpha GetOpacity();
+ 
+-  void GenerateImages(SkColor normal_icon_color,
+-                      SkColor hover_pressed_icon_color);
+-
+   MouseEventCallback mouse_event_callback_;
+ 
++  SkColor icon_colors_[views::Button::STATE_PRESSED + 1];
++  SkColor highlight_colors_[views::Button::STATE_PRESSED + 1];
++
+   DISALLOW_COPY_AND_ASSIGN(TabCloseButton);
+ };
+ 
+diff --git a/content/browser/process_internals/process_internals.mojom b/content/browser/process_internals/process_internals.mojom
+index da65f0f..d8fe859 100644
+--- a/content/browser/process_internals/process_internals.mojom
++++ b/content/browser/process_internals/process_internals.mojom
+@@ -11,7 +11,6 @@
+   // Returns a string containing the currently active isolation modes.
+   GetIsolationMode() => (string mode);
+ 
+-  // Returns a list of isolated origins in their serialized to string
+-  // format. This avoids duplicating serialization code to JavaScript.
+-  GetIsolatedOrigins() => (array<string> isolated_origins);
++  // Returns the number of isolated origins.
++  GetIsolatedOriginsSize() => (uint32 size);
+ };
+diff --git a/content/browser/process_internals/process_internals_handler_impl.cc b/content/browser/process_internals/process_internals_handler_impl.cc
+index ae4fc6d..dbd0e57 100644
+--- a/content/browser/process_internals/process_internals_handler_impl.cc
++++ b/content/browser/process_internals/process_internals_handler_impl.cc
+@@ -30,15 +30,10 @@
+                                         : base::JoinString(modes, ", "));
+ }
+ 
+-void ProcessInternalsHandlerImpl::GetIsolatedOrigins(
+-    GetIsolatedOriginsCallback callback) {
+-  std::vector<url::Origin> origins_list =
+-      SiteIsolationPolicy::GetIsolatedOrigins();
+-  std::vector<std::string> origins;
+-  for (size_t i = 0; i < origins_list.size(); ++i)
+-    origins.push_back(origins_list[i].Serialize());
+-
+-  std::move(callback).Run(origins);
++void ProcessInternalsHandlerImpl::GetIsolatedOriginsSize(
++    GetIsolatedOriginsSizeCallback callback) {
++  int size = SiteIsolationPolicy::GetIsolatedOrigins().size();
++  std::move(callback).Run(size);
+ }
+ 
+ }  // namespace content
+diff --git a/content/browser/process_internals/process_internals_handler_impl.h b/content/browser/process_internals/process_internals_handler_impl.h
+index 3a8ee50..54b7def 100644
+--- a/content/browser/process_internals/process_internals_handler_impl.h
++++ b/content/browser/process_internals/process_internals_handler_impl.h
+@@ -22,7 +22,7 @@
+ 
+   // mojom::ProcessInternalsHandler overrides:
+   void GetIsolationMode(GetIsolationModeCallback callback) override;
+-  void GetIsolatedOrigins(GetIsolatedOriginsCallback callback) override;
++  void GetIsolatedOriginsSize(GetIsolatedOriginsSizeCallback callback) override;
+ 
+  private:
+   mojo::Binding<::mojom::ProcessInternalsHandler> binding_;
+diff --git a/content/browser/resources/process/process_internals.html b/content/browser/resources/process/process_internals.html
+index 9e5acb2..9b63631e 100644
+--- a/content/browser/resources/process/process_internals.html
++++ b/content/browser/resources/process/process_internals.html
+@@ -12,5 +12,5 @@
+   <title>Process Model Internals</title>
+ </head>
+ <div id="site-isolation-mode">Site Isolation mode: <span id='isolation-mode'>unknown</span></div>
+-<div id="isolated-origins-container">Isolated origins: <span id='isolated-origins'></span></div>
++<div id="isolated-origins-container">Number of isolated origins: <span id='isolated-origins'></span></div>
+ </html>
+diff --git a/content/browser/resources/process/process_internals.js b/content/browser/resources/process/process_internals.js
+index a745e29..1558474 100644
+--- a/content/browser/resources/process/process_internals.js
++++ b/content/browser/resources/process/process_internals.js
+@@ -24,9 +24,8 @@
+   uiHandler.getIsolationMode().then((response) => {
+     document.getElementById('isolation-mode').innerText = response.mode;
+   });
+-  uiHandler.getIsolatedOrigins().then((response) => {
+-    document.getElementById('isolated-origins').innerText =
+-        response.isolatedOrigins.join(', ');
++  uiHandler.getIsolatedOriginsSize().then((response) => {
++    document.getElementById('isolated-origins').innerText = response.size;
+   });
+ });
+ 
+diff --git a/third_party/blink/renderer/platform/graphics/paint/paint_controller.cc b/third_party/blink/renderer/platform/graphics/paint/paint_controller.cc
+index 178d297..abaa96b 100644
+--- a/third_party/blink/renderer/platform/graphics/paint/paint_controller.cc
++++ b/third_party/blink/renderer/platform/graphics/paint/paint_controller.cc
+@@ -389,6 +389,7 @@
+       ++num_indexed_items_;
+ #endif
+       AddToIndicesByClientMap(item.Client(), i, out_of_order_item_indices_);
++      next_item_to_index_ = i + 1;
+     }
+   }
+ 
+diff --git a/third_party/blink/renderer/platform/graphics/paint/paint_controller_test.cc b/third_party/blink/renderer/platform/graphics/paint/paint_controller_test.cc
+index 84d3e4f..be7dd56 100644
+--- a/third_party/blink/renderer/platform/graphics/paint/paint_controller_test.cc
++++ b/third_party/blink/renderer/platform/graphics/paint/paint_controller_test.cc
+@@ -1527,6 +1527,81 @@
+   EXPECT_TRUE(GetPaintController().CacheIsAllInvalid());
+ }
+ 
++TEST_P(PaintControllerTest, InsertValidItemInFront) {
++  FakeDisplayItemClient first("first", LayoutRect(100, 100, 300, 300));
++  FakeDisplayItemClient second("second", LayoutRect(100, 100, 200, 200));
++  FakeDisplayItemClient third("third", LayoutRect(100, 100, 100, 100));
++  FakeDisplayItemClient fourth("fourth", LayoutRect(100, 100, 50, 50));
++  GraphicsContext context(GetPaintController());
++
++  InitRootChunk();
++  DrawRect(context, first, kBackgroundType, FloatRect(100, 100, 300, 300));
++  DrawRect(context, second, kBackgroundType, FloatRect(100, 100, 200, 200));
++  DrawRect(context, third, kBackgroundType, FloatRect(100, 100, 100, 100));
++  DrawRect(context, fourth, kBackgroundType, FloatRect(100, 100, 50, 50));
++
++  EXPECT_EQ(0, NumCachedNewItems());
++  CommitAndFinishCycle();
++  EXPECT_DISPLAY_LIST(GetPaintController().GetDisplayItemList(), 4,
++                      TestDisplayItem(first, kBackgroundType),
++                      TestDisplayItem(second, kBackgroundType),
++                      TestDisplayItem(third, kBackgroundType),
++                      TestDisplayItem(fourth, kBackgroundType));
++  EXPECT_TRUE(first.IsValid());
++  EXPECT_TRUE(second.IsValid());
++  EXPECT_TRUE(third.IsValid());
++  EXPECT_TRUE(fourth.IsValid());
++
++  // Simulate that a composited scrolling element is scrolled down, and "first"
++  // and "second" are scrolled out of the interest rect.
++  InitRootChunk();
++  DrawRect(context, third, kBackgroundType, FloatRect(100, 100, 100, 100));
++  DrawRect(context, fourth, kBackgroundType, FloatRect(100, 100, 50, 50));
++
++  EXPECT_EQ(2, NumCachedNewItems());
++#if DCHECK_IS_ON()
++  EXPECT_EQ(2, NumSequentialMatches());
++  EXPECT_EQ(0, NumOutOfOrderMatches());
++  // We indexed "first" and "second" when finding the cached item for "third".
++  EXPECT_EQ(2, NumIndexedItems());
++#endif
++
++  CommitAndFinishCycle();
++  EXPECT_DISPLAY_LIST(GetPaintController().GetDisplayItemList(), 2,
++                      TestDisplayItem(third, kBackgroundType),
++                      TestDisplayItem(fourth, kBackgroundType));
++  EXPECT_TRUE(first.IsValid());
++  EXPECT_TRUE(second.IsValid());
++  EXPECT_TRUE(third.IsValid());
++  EXPECT_TRUE(fourth.IsValid());
++
++  // Simulate "first" and "second" are scrolled back into the interest rect.
++  InitRootChunk();
++  DrawRect(context, first, kBackgroundType, FloatRect(100, 100, 300, 300));
++  DrawRect(context, second, kBackgroundType, FloatRect(100, 100, 200, 200));
++  DrawRect(context, third, kBackgroundType, FloatRect(100, 100, 100, 100));
++  DrawRect(context, fourth, kBackgroundType, FloatRect(100, 100, 50, 50));
++
++  EXPECT_EQ(2, NumCachedNewItems());
++#if DCHECK_IS_ON()
++  EXPECT_EQ(2, NumSequentialMatches());
++  EXPECT_EQ(0, NumOutOfOrderMatches());
++  // We indexed "third" and "fourth" when finding the cached item for "first".
++  EXPECT_EQ(2, NumIndexedItems());
++#endif
++
++  CommitAndFinishCycle();
++  EXPECT_DISPLAY_LIST(GetPaintController().GetDisplayItemList(), 4,
++                      TestDisplayItem(first, kBackgroundType),
++                      TestDisplayItem(second, kBackgroundType),
++                      TestDisplayItem(third, kBackgroundType),
++                      TestDisplayItem(fourth, kBackgroundType));
++  EXPECT_TRUE(first.IsValid());
++  EXPECT_TRUE(second.IsValid());
++  EXPECT_TRUE(third.IsValid());
++  EXPECT_TRUE(fourth.IsValid());
++}
++
+ // Death tests don't work properly on Android.
+ #if defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
+ 
+diff --git a/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc b/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
+index 1930af1..d59bfba 100644
+--- a/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
++++ b/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
+@@ -10,12 +10,14 @@
+ #include "content/public/browser/host_zoom_map.h"
+ #include "content/public/browser/navigation_handle.h"
+ #include "content/public/browser/render_process_host.h"
++#include "content/public/browser/render_view_host.h"
+ #include "content/public/browser/render_widget_host.h"
+ #include "content/public/browser/render_widget_host_view.h"
+ #include "content/public/browser/stream_handle.h"
+ #include "content/public/browser/stream_info.h"
+ #include "content/public/common/child_process_host.h"
+ #include "content/public/common/url_constants.h"
++#include "content/public/common/web_preferences.h"
+ #include "extensions/browser/api/extensions_api_client.h"
+ #include "extensions/browser/api/mime_handler_private/mime_handler_private.h"
+ #include "extensions/browser/extension_registry.h"
+@@ -216,6 +218,9 @@
+   web_contents()->GetController().LoadURL(
+       stream_->handler_url(), content::Referrer(),
+       ui::PAGE_TRANSITION_AUTO_TOPLEVEL, std::string());
++  auto prefs = web_contents()->GetRenderViewHost()->GetWebkitPreferences();
++  prefs.navigate_on_drag_drop = true;
++  web_contents()->GetRenderViewHost()->UpdateWebkitPreferences(prefs);
+ }
+ 
+ void MimeHandlerViewGuest::DidInitialize(
+diff --git a/chrome/test/chromedriver/server/chromedriver_server.cc b/chrome/test/chromedriver/server/chromedriver_server.cc
+index 178e683..1d233d5 100644
+--- a/chrome/test/chromedriver/server/chromedriver_server.cc
++++ b/chrome/test/chromedriver/server/chromedriver_server.cc
+@@ -193,6 +193,34 @@
+                            const HttpRequestHandlerFunc& handle_request_func) {
+   std::unique_ptr<HttpServer> temp_server;
+ 
++// On Linux and Windows, we listen to IPv6 first, and then optionally listen
++// to IPv4 (depending on |need_ipv4| below). The reason is listening to an
++// IPv6 port may automatically listen to the same IPv4 port as well, and would
++// return an error if the IPv4 port is already in use.
++//
++// On Mac, however, we listen to IPv4 first before listening to IPv6. If we
++// were to listen to IPv6 first, it would succeed whether the corresponding
++// IPv4 port is in use or not, and we wouldn't know if we ended up listening
++// to both IPv4 and IPv6 ports, or only IPv6 port. Listening to IPv4 first
++// ensures that we successfully listen to both IPv4 and IPv6.
++
++#if defined(OS_MACOSX)
++  temp_server.reset(new HttpServer(handle_request_func));
++  int ipv4_status = temp_server->Start(port, allow_remote, true);
++  if (ipv4_status == net::OK) {
++    lazy_tls_server_ipv4.Pointer()->Set(temp_server.release());
++  } else if (ipv4_status == net::ERR_ADDRESS_IN_USE) {
++    // ERR_ADDRESS_IN_USE causes an immediate exit, since it indicates the port
++    // is being used by another process. Other errors are assumed to indicate
++    // that IPv4 isn't available for some reason, e.g., on an IPv6-only host.
++    // Thus the error doesn't cause an exit immediately. The HttpServer::Start
++    // method has already printed a message indicating what has happened. Later,
++    // near the end of this function, we exit if both IPv4 and IPv6 failed.
++    printf("IPv4 port not available. Exiting...\n");
++    exit(1);
++  }
++#endif
++
+   temp_server.reset(new HttpServer(handle_request_func));
+   int ipv6_status = temp_server->Start(port, allow_remote, false);
+   if (ipv6_status == net::OK) {
+@@ -202,6 +230,7 @@
+     exit(1);
+   }
+ 
++#if !defined(OS_MACOSX)
+   // In some cases, binding to an IPv6 port also binds to the same IPv4 port.
+   // The following code determines if it is necessary to bind to IPv4 port.
+   enum class NeedIPv4 { NOT_NEEDED, UNKNOWN, NEEDED } need_ipv4;
+@@ -212,9 +241,7 @@
+ // Currently, the network layer provides no way for us to control dual-protocol
+ // bind option, or to query the current setting of that option, so we do our
+ // best to determine the current setting. See https://crbug.com/858892.
+-#if defined(OS_MACOSX)
+-    need_ipv4 = NeedIPv4::NEEDED;
+-#elif defined(OS_LINUX)
++#if defined(OS_LINUX)
+     // On Linux, dual-protocol bind is controlled by a system file.
+     // ChromeOS builds also have OS_LINUX defined, so the code below applies.
+     std::string bindv6only;
+@@ -257,6 +284,7 @@
+       }
+     }
+   }
++#endif  // !defined(OS_MACOSX)
+ 
+   if (ipv4_status != net::OK && ipv6_status != net::OK) {
+     printf("Unable to start server with either IPv4 or IPv6. Exiting...\n");
+diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
+index 7400bd6..8c50f50 100644
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1690,24 +1690,11 @@
+   if (!theme_provider)
+     return;
+ 
+-  const SkColor title_color = controller_->GetTabForegroundColor(
+-      IsActive() ? TAB_ACTIVE : TAB_INACTIVE);
+-
+-  SkColor new_button_color = title_color;
+-  if (IsActive()) {
+-    // This alpha value (0x2f) blends GoogleGrey800 close to GoogleGrey700.
+-    new_button_color = color_utils::BlendTowardOppositeLuma(title_color, 0x2f);
+-  }
+-
+-  if (button_color_ != new_button_color) {
+-    button_color_ = new_button_color;
+-    title_->SetEnabledColor(title_color);
+-    alert_indicator_button_->OnParentTabButtonColorChanged();
+-  }
+-  UpdateCloseButtonColors(title_color);
++  UpdateButtonIconColors(controller_->GetTabForegroundColor(
++      IsActive() ? TAB_ACTIVE : TAB_INACTIVE));
+ }
+ 
+-void Tab::UpdateCloseButtonColors(SkColor title_color) {
++void Tab::UpdateButtonIconColors(SkColor title_color) {
+   // These ratios are calculated from the default colors specified in the
+   // Material Refresh design document. Active/inactive are the contrast ratios
+   // of the close X against the tab background. Hovered/pressed are the contrast
+@@ -1717,6 +1704,8 @@
+   constexpr float kMinimumHoveredContrastRatio = 5.02f;
+   constexpr float kMinimumPressedContrastRatio = 4.41f;
+ 
++  title_->SetEnabledColor(title_color);
++
+   const SkColor tab_bg_color = controller_->GetTabBackgroundColor(
+       IsActive() ? TAB_ACTIVE : TAB_INACTIVE);
+   const SkColor base_icon_color =
+@@ -1756,6 +1745,11 @@
+       generated_icon_color, generated_hovered_icon_color,
+       generated_pressed_icon_color, generated_hovered_color,
+       generated_pressed_color);
++
++  if (button_color_ != generated_icon_color) {
++    button_color_ = generated_icon_color;
++    alert_indicator_button_->OnParentTabButtonColorChanged();
++  }
+ }
+ 
+ Tab::BackgroundCache::BackgroundCache() = default;
+diff --git a/chrome/browser/ui/views/tabs/tab.h b/chrome/browser/ui/views/tabs/tab.h
+index f6aa311..b45133d 100644
+--- a/chrome/browser/ui/views/tabs/tab.h
++++ b/chrome/browser/ui/views/tabs/tab.h
+@@ -306,8 +306,8 @@
+   // time the theme or active state may have changed.
+   void OnButtonColorMaybeChanged();
+ 
+-  // Generate and update close button colors for proper contrast.
+-  void UpdateCloseButtonColors(SkColor title_color);
++  // Generate and update close button and alert icon colors for proper contrast.
++  void UpdateButtonIconColors(SkColor title_color);
+ 
+   // The controller, never NULL.
+   TabController* const controller_;
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1707,7 +1707,7 @@
+   title_->SetEnabledColor(title_color);
+ 
+   const SkColor tab_bg_color = controller_->GetTabBackgroundColor(
+-      IsActive() ? TAB_ACTIVE : TAB_INACTIVE);
++      IsActive() ? TAB_ACTIVE : TAB_INACTIVE, true);
+   const SkColor base_icon_color =
+       MD::GetMode() == ui::MaterialDesignController::MATERIAL_TOUCH_OPTIMIZED
+           ? GetCloseTabButtonColor(views::Button::STATE_NORMAL)
+diff --git a/chrome/browser/resources/local_ntp/custom_backgrounds.js b/chrome/browser/resources/local_ntp/custom_backgrounds.js
+index 8cc9f8a..2c37b6a 100644
+--- a/chrome/browser/resources/local_ntp/custom_backgrounds.js
++++ b/chrome/browser/resources/local_ntp/custom_backgrounds.js
+@@ -947,16 +947,13 @@
+ 
+   // Interactions with the "Chrome backgrounds" option.
+   var defaultWallpapersInteraction = function(event) {
+-    customBackgrounds.loadChromeBackgrounds();
+-    $('ntp-collection-loader').onload = function() {
+-      editDialog.close();
+-      if (typeof coll != 'undefined' && coll.length > 0) {
+-        customBackgrounds.showCollectionSelectionDialog(
+-            customBackgrounds.SOURCES.CHROME_BACKGROUNDS);
+-      } else {
+-        customBackgrounds.handleError(coll_errors);
+-      }
+-    };
++    editDialog.close();
++    if (typeof coll != 'undefined' && coll.length > 0) {
++      customBackgrounds.showCollectionSelectionDialog(
++          customBackgrounds.SOURCES.CHROME_BACKGROUNDS);
++    } else {
++      customBackgrounds.handleError(coll_errors);
++    }
+     ntpApiHandle.logEvent(BACKGROUND_CUSTOMIZATION_LOG_TYPE
+                               .NTP_CUSTOMIZE_CHROME_BACKGROUNDS_CLICKED);
+   };
+diff --git a/chrome/browser/resources/local_ntp/custom_links_edit.html b/chrome/browser/resources/local_ntp/custom_links_edit.html
+index 208ebe0..ee8874e 100644
+--- a/chrome/browser/resources/local_ntp/custom_links_edit.html
++++ b/chrome/browser/resources/local_ntp/custom_links_edit.html
+@@ -31,9 +31,9 @@
+         <div id="invalid-url" class="error-msg"></div>
+       </div>
+       <div class="buttons-container">
+-        <button id="delete" class="secondary" tabindex="0"></button>
++        <button id="delete" class="secondary" type="button" tabindex="0"></button>
+         <span class="right">
+-          <button id="cancel" class="secondary" tabindex="0"></button>
++          <button id="cancel" class="secondary" type="button" tabindex="0"></button>
+           <button type="submit" id="done" class="primary" tabindex="0"></button>
+         </span>
+       </div>
+--- a/cc/trees/layer_tree_host.cc
++++ b/cc/trees/layer_tree_host.cc
+@@ -1331,8 +1331,8 @@
+   // We should never process non-unit page_scale_delta for an OOPIF subframe.
+   // TODO(wjmaclean): Remove this check as a pre-condition to closing the bug.
+   // https://crbug.com/845097
+-  CHECK(!settings_.is_layer_tree_for_subframe ||
+-        page_scale == page_scale_factor_)
++  DCHECK(!settings_.is_layer_tree_for_subframe ||
++         page_scale == page_scale_factor_)
+       << "Setting PSF in oopif subframe: old psf = " << page_scale_factor_
+       << ", new psf = " << page_scale;
+   page_scale_factor_ = page_scale;
+diff --git a/third_party/blink/renderer/core/frame/reporting_observer.cc b/third_party/blink/renderer/core/frame/reporting_observer.cc
+index feb763a..9147f97 100644
+--- a/third_party/blink/renderer/core/frame/reporting_observer.cc
++++ b/third_party/blink/renderer/core/frame/reporting_observer.cc
+@@ -24,9 +24,15 @@
+ ReportingObserver::ReportingObserver(ExecutionContext* execution_context,
+                                      V8ReportingObserverCallback* callback,
+                                      ReportingObserverOptions options)
+-    : execution_context_(execution_context),
++    : ContextClient(execution_context),
++      execution_context_(execution_context),
+       callback_(callback),
+-      options_(options) {}
++      options_(options),
++      registered_(false) {}
++
++bool ReportingObserver::HasPendingActivity() const {
++  return registered_;
++}
+ 
+ void ReportingObserver::ReportToCallback() {
+   // The reports queued to be sent to callbacks are copied (and cleared) before
+@@ -66,10 +72,12 @@
+ }
+ 
+ void ReportingObserver::observe() {
++  registered_ = true;
+   ReportingContext::From(execution_context_)->RegisterObserver(this);
+ }
+ 
+ void ReportingObserver::disconnect() {
++  registered_ = false;
+   ReportingContext::From(execution_context_)->UnregisterObserver(this);
+ }
+ 
+@@ -84,6 +92,7 @@
+   visitor->Trace(callback_);
+   visitor->Trace(report_queue_);
+   ScriptWrappable::Trace(visitor);
++  ContextClient::Trace(visitor);
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/reporting_observer.h b/third_party/blink/renderer/core/frame/reporting_observer.h
+index da46280..4f358dc 100644
+--- a/third_party/blink/renderer/core/frame/reporting_observer.h
++++ b/third_party/blink/renderer/core/frame/reporting_observer.h
+@@ -5,11 +5,11 @@
+ #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_REPORTING_OBSERVER_H_
+ #define THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_REPORTING_OBSERVER_H_
+ 
++#include "third_party/blink/renderer/bindings/core/v8/active_script_wrappable.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_reporting_observer_callback.h"
+ #include "third_party/blink/renderer/core/core_export.h"
+ #include "third_party/blink/renderer/core/frame/report.h"
+ #include "third_party/blink/renderer/core/frame/reporting_observer_options.h"
+-#include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
+ #include "third_party/blink/renderer/platform/wtf/vector.h"
+ 
+ namespace blink {
+@@ -17,7 +17,11 @@
+ class ExecutionContext;
+ class Report;
+ 
+-class CORE_EXPORT ReportingObserver final : public ScriptWrappable {
++class CORE_EXPORT ReportingObserver final
++    : public ScriptWrappable,
++      public ActiveScriptWrappable<ReportingObserver>,
++      public ContextClient {
++  USING_GARBAGE_COLLECTED_MIXIN(ReportingObserver);
+   DEFINE_WRAPPERTYPEINFO();
+ 
+  public:
+@@ -25,6 +29,9 @@
+                                    V8ReportingObserverCallback*,
+                                    ReportingObserverOptions);
+ 
++  // ActiveScriptWrappable
++  bool HasPendingActivity() const final;
++
+   // Call the callback with all reports in |report_queue_|.
+   void ReportToCallback();
+ 
+@@ -54,9 +61,10 @@
+                              ReportingObserverOptions);
+ 
+   Member<ExecutionContext> execution_context_;
+-  Member<V8ReportingObserverCallback> callback_;
++  TraceWrapperMember<V8ReportingObserverCallback> callback_;
+   ReportingObserverOptions options_;
+   HeapVector<Member<Report>> report_queue_;
++  bool registered_;
+ };
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/reporting_observer.idl b/third_party/blink/renderer/core/frame/reporting_observer.idl
+index 9675882..0d273ae 100644
+--- a/third_party/blink/renderer/core/frame/reporting_observer.idl
++++ b/third_party/blink/renderer/core/frame/reporting_observer.idl
+@@ -2,13 +2,14 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+-// https://github.com/WICG/reporting/blob/master/EXPLAINER.md#reportingobserver---observing-reports-from-javascript
++// https://w3c.github.io/reporting/#interface-reporting-observer
+ 
+ callback ReportingObserverCallback = void (sequence<Report> reports, ReportingObserver observer);
+ 
+ [
+     Constructor(ReportingObserverCallback callback, optional ReportingObserverOptions options),
+     ConstructorCallWith=ExecutionContext,
++    ActiveScriptWrappable,
+     RuntimeEnabled=ReportingObserver
+ ] interface ReportingObserver {
+     void observe();
+diff --git a/chrome/browser/chromeos/login/ui/login_display_host_webui.cc b/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
+index 1797c70..90c255d 100644
+--- a/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
++++ b/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
+@@ -348,6 +348,23 @@
+   DISALLOW_COPY_AND_ASSIGN(CloseAfterCommit);
+ };
+ 
++// Returns true if we have default audio device.
++bool CanPlayStartupSound() {
++  chromeos::AudioDevice device;
++  bool found =
++      chromeos::CrasAudioHandler::Get()->GetPrimaryActiveOutputDevice(&device);
++  return found && device.stable_device_id_version &&
++         device.type != chromeos::AudioDeviceType::AUDIO_TYPE_OTHER;
++}
++
++// Returns true if it is too late to play startup sound.
++bool StartupSoundOutdated(base::TimeTicks login_prompt_visible_time) {
++  // Don't try to play startup sound if login prompt has been already visible
++  // for a long time.
++  return base::TimeTicks::Now() - login_prompt_visible_time >
++         base::TimeDelta::FromMilliseconds(kStartupSoundMaxDelayMs);
++}
++
+ }  // namespace
+ 
+ namespace chromeos {
+@@ -851,7 +868,7 @@
+ // LoginDisplayHostWebUI, chromeos::CrasAudioHandler::AudioObserver:
+ 
+ void LoginDisplayHostWebUI::OnActiveOutputNodeChanged() {
+-  TryToPlayOobeStartupSound();
++  PlayStartupSoundIfPossible();
+ }
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -1102,25 +1119,8 @@
+ }
+ 
+ void LoginDisplayHostWebUI::TryToPlayOobeStartupSound() {
+-  if (is_voice_interaction_oobe_)
+-    return;
+-
+-  if (oobe_startup_sound_played_ || login_prompt_visible_time_.is_null() ||
+-      !CrasAudioHandler::Get()->GetPrimaryActiveOutputNode()) {
+-    return;
+-  }
+-
+-  oobe_startup_sound_played_ = true;
+-
+-  // Don't try play startup sound if login prompt is already visible
+-  // for a long time or can't be played.
+-  if (base::TimeTicks::Now() - login_prompt_visible_time_ >
+-      base::TimeDelta::FromMilliseconds(kStartupSoundMaxDelayMs)) {
+-    return;
+-  }
+-
+-  AccessibilityManager::Get()->PlayEarcon(SOUND_STARTUP,
+-                                          PlaySoundOption::ALWAYS);
++  need_to_play_startup_sound_ = true;
++  PlayStartupSoundIfPossible();
+ }
+ 
+ void LoginDisplayHostWebUI::OnLoginPromptVisible() {
+@@ -1185,6 +1185,26 @@
+   NOTREACHED();
+ }
+ 
++void LoginDisplayHostWebUI::PlayStartupSoundIfPossible() {
++  if (!need_to_play_startup_sound_ || oobe_startup_sound_played_)
++    return;
++
++  if (login_prompt_visible_time_.is_null())
++    return;
++
++  if (is_voice_interaction_oobe_ || !CanPlayStartupSound())
++    return;
++
++  need_to_play_startup_sound_ = false;
++  oobe_startup_sound_played_ = true;
++
++  if (StartupSoundOutdated(login_prompt_visible_time_))
++    return;
++
++  AccessibilityManager::Get()->PlayEarcon(SOUND_STARTUP,
++                                          PlaySoundOption::ALWAYS);
++}
++
+ ////////////////////////////////////////////////////////////////////////////////
+ // external
+ 
+diff --git a/chrome/browser/chromeos/login/ui/login_display_host_webui.h b/chrome/browser/chromeos/login/ui/login_display_host_webui.h
+index 2891ac7..d705bb9 100644
+--- a/chrome/browser/chromeos/login/ui/login_display_host_webui.h
++++ b/chrome/browser/chromeos/login/ui/login_display_host_webui.h
+@@ -183,6 +183,9 @@
+   // Creates or recreates |existing_user_controller_|.
+   void CreateExistingUserController();
+ 
++  // Plays startup sound if needed and audio device is ready.
++  void PlayStartupSoundIfPossible();
++
+   // Sign in screen controller.
+   std::unique_ptr<ExistingUserController> existing_user_controller_;
+ 
+@@ -257,6 +260,9 @@
+ 
+   bool is_voice_interaction_oobe_ = false;
+ 
++  // True if we need to play startup sound when audio device becomes available.
++  bool need_to_play_startup_sound_ = false;
++
+   base::WeakPtrFactory<LoginDisplayHostWebUI> weak_factory_;
+ 
+   DISALLOW_COPY_AND_ASSIGN(LoginDisplayHostWebUI);
+diff --git a/chrome/browser/resources/chromeos/login/oobe_buttons.html b/chrome/browser/resources/chromeos/login/oobe_buttons.html
+index d1edbac..55da074 100644
+--- a/chrome/browser/resources/chromeos/login/oobe_buttons.html
++++ b/chrome/browser/resources/chromeos/login/oobe_buttons.html
+@@ -14,9 +14,8 @@
+ <iron-iconset-svg name="oobe-buttons-20" size="20">
+   <svg>
+     <defs>
+-      <g id="arrow-forward" fill="none" fill-rule="evenodd">
+-        <path d="M0 0h20v20H0z"></path>
+-        <path fill="#FFF" fill-rule="nonzero" d="M7 13.825L11.327 10 7 6.175 8.332 5 14 10l-5.668 5z">
++      <g id="arrow-forward" fill-rule="nonzero">
++        <path d="M7 13.825L11.327 10 7 6.175 8.332 5 14 10l-5.668 5z">
+         </path>
+       </g>
+     </defs>
+@@ -26,9 +25,8 @@
+ <iron-iconset-svg name="oobe-buttons-40" size="40">
+   <svg>
+     <defs>
+-      <g id="arrow-forward" fill="none" fill-rule="evenodd">
+-        <path d="M0 0h40v40H0z"></path>
+-        <path fill="#FFF" fill-rule="nonzero" d="M14 27.65L22.653 20 14 12.35 16.664 10 28 20 16.664 30z">
++      <g id="arrow-forward" fill-rule="nonzero">
++        <path d="M14 27.65L22.653 20 14 12.35 16.664 10 28 20 16.664 30z">
+         </path>
+       </g>
+     </defs>
+diff --git a/chrome/browser/resources/chromeos/login/oobe_eula.css b/chrome/browser/resources/chromeos/login/oobe_eula.css
+index 6ed8fea..6583bf6 100644
+--- a/chrome/browser/resources/chromeos/login/oobe_eula.css
++++ b/chrome/browser/resources/chromeos/login/oobe_eula.css
+@@ -22,8 +22,8 @@
+ }
+ 
+ #crosEulaFrame {
+-  border: 1px solid var(--google-blue-500);
+-  border-radius: 2px;
++  border: 1px solid rgb(218, 220, 224); /* #DADCE0 */
++  border-radius: 4px;
+   box-shadow: 0 1px 4px rgba(0, 0, 0, .13);
+ }
+ 
+diff --git a/chrome/browser/chromeos/login/ui/login_display_host_webui.cc b/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
+index 90c255d..b35450e 100644
+--- a/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
++++ b/chrome/browser/chromeos/login/ui/login_display_host_webui.cc
+@@ -18,6 +18,7 @@
+ #include "base/location.h"
+ #include "base/logging.h"
+ #include "base/macros.h"
++#include "base/metrics/histogram_macros.h"
+ #include "base/single_thread_task_runner.h"
+ #include "base/strings/string_split.h"
+ #include "base/strings/utf_string_conversions.h"
+@@ -113,7 +114,7 @@
+ namespace {
+ 
+ // Maximum delay for startup sound after 'loginPromptVisible' signal.
+-const int kStartupSoundMaxDelayMs = 2000;
++const int kStartupSoundMaxDelayMs = 4000;
+ 
+ // URL which corresponds to the login WebUI.
+ const char kLoginURL[] = "chrome://oobe/login";
+@@ -357,14 +358,6 @@
+          device.type != chromeos::AudioDeviceType::AUDIO_TYPE_OTHER;
+ }
+ 
+-// Returns true if it is too late to play startup sound.
+-bool StartupSoundOutdated(base::TimeTicks login_prompt_visible_time) {
+-  // Don't try to play startup sound if login prompt has been already visible
+-  // for a long time.
+-  return base::TimeTicks::Now() - login_prompt_visible_time >
+-         base::TimeDelta::FromMilliseconds(kStartupSoundMaxDelayMs);
+-}
+-
+ }  // namespace
+ 
+ namespace chromeos {
+@@ -1198,9 +1191,17 @@
+   need_to_play_startup_sound_ = false;
+   oobe_startup_sound_played_ = true;
+ 
+-  if (StartupSoundOutdated(login_prompt_visible_time_))
+-    return;
++  const base::TimeDelta time_since_login_prompt_visible =
++      base::TimeTicks::Now() - login_prompt_visible_time_;
++  UMA_HISTOGRAM_TIMES("Accessibility.OOBEStartupSoundDelay",
++                      time_since_login_prompt_visible);
+ 
++  // Don't try to play startup sound if login prompt has been already visible
++  // for a long time.
++  if (time_since_login_prompt_visible >
++      base::TimeDelta::FromMilliseconds(kStartupSoundMaxDelayMs)) {
++    return;
++  }
+   AccessibilityManager::Get()->PlayEarcon(SOUND_STARTUP,
+                                           PlaySoundOption::ALWAYS);
+ }
+diff --git a/tools/metrics/histograms/histograms.xml b/tools/metrics/histograms/histograms.xml
+index c72d627..1fe5b46 100644
+--- a/tools/metrics/histograms/histograms.xml
++++ b/tools/metrics/histograms/histograms.xml
+@@ -327,6 +327,15 @@
+   </summary>
+ </histogram>
+ 
++<histogram name="Accessibility.OOBEStartupSoundDelay" units="ms">
++  <owner>lpalmaro@chromium.org</owner>
++  <owner>alemate@chromium.org</owner>
++  <summary>
++    Delay between login_prompt_visible and Chrome OS OOBE startup sound
++    playback. Depends on sound subsystem initialization time.
++  </summary>
++</histogram>
++
+ <histogram name="Accessibility.State" enum="BooleanEnabled">
+   <obsolete>
+     Deprecated 12/2016 in Issue 672205 with the addition of
+diff --git a/chrome/VERSION b/chrome/VERSION
+index 8c33d19..828e8628 100644
+--- a/chrome/VERSION
++++ b/chrome/VERSION
+@@ -1,4 +1,4 @@
+ MAJOR=69
+ MINOR=0
+ BUILD=3497
+-PATCH=41
++PATCH=42

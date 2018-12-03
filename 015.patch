@@ -1,11 +1,38 @@
---- a/components/autofill/core/browser/autofill_manager.cc	2017-10-04 18:07:38.000000000 -0400
-+++ b/components/autofill/core/browser/autofill_manager.cc	2017-10-08 19:01:33.810724577 -0400
-@@ -275,7 +275,7 @@
-   registry->RegisterIntegerPref(
-       prefs::kAutofillCreditCardSigninPromoImpressionCount, 0);
+--- a/components/autofill/core/common/autofill_prefs.cc	2018-08-07 
+18:56:56.242548793 -0400
++++ b/components/autofill/core/common/autofill_prefs.cc.new	
+2018-08-07 18:58:22.599943254 -0400
+@@ -75,10 +75,10 @@
+       prefs::kAutofillBillingCustomerNumber, 0.0,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PRIORITY_PREF);
    registry->RegisterBooleanPref(
--      prefs::kAutofillEnabled, true,
-+      prefs::kAutofillEnabled, false,
+-      prefs::kAutofillEnabledDeprecated, true,
++      prefs::kAutofillEnabledDeprecated, false,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
    registry->RegisterBooleanPref(
-       prefs::kAutofillProfileUseDatesFixed, false,
+-      prefs::kAutofillProfileEnabled, true,
++      prefs::kAutofillProfileEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterIntegerPref(
+       prefs::kAutofillLastVersionDeduped, 0,
+@@ -87,7 +87,7 @@
+       prefs::kAutofillLastVersionDisusedAddressesDeleted, 0,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterBooleanPref(
+-      prefs::kAutofillCreditCardEnabled, true,
++      prefs::kAutofillCreditCardEnabled, false,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterStringPref(
+       prefs::kAutofillProfileValidity, "",
+@@ -97,9 +97,9 @@
+   registry->RegisterIntegerPref(
+       prefs::kAutofillCreditCardSigninPromoImpressionCount, 0);
+   registry->RegisterBooleanPref(prefs::kAutofillJapanCityFieldMigrated, false);
+-  registry->RegisterBooleanPref(prefs::kAutofillWalletImportEnabled, true);
++  registry->RegisterBooleanPref(prefs::kAutofillWalletImportEnabled, false);
+   registry->RegisterBooleanPref(
+-      prefs::kAutofillWalletImportStorageCheckboxState, true);
++      prefs::kAutofillWalletImportStorageCheckboxState, false);
+   registry->RegisterIntegerPref(
+       prefs::kAutofillAcceptSaveCreditCardPromptState,
+       prefs::PREVIOUS_SAVE_CREDIT_CARD_PROMPT_USER_DECISION_NONE);
